@@ -34,7 +34,7 @@ root for their own build layer but must end on a non-root user.
 ## Network
 
 The image itself imposes no network policy — egress control is a property of where the runner
-executes (Boardwalk Cloud applies the workflow's declared egress policy to hosted runs;
+executes (hosted Boardwalk applies the workflow's declared egress policy to hosted runs;
 self-hosted runners inherit your network). TLS roots come from `ca-certificates`.
 
 ## Resource limits

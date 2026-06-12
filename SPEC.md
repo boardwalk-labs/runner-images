@@ -1,8 +1,8 @@
 # SPEC — `boardwalk-runner-images`
 
-> The public trust surface for hosted runner environments: exactly what your code runs inside on Boardwalk Cloud. Apache-2.0. Public in **Phase 3** (before hosted-runner trust questions arise).
+> The public trust surface for hosted runner environments: exactly what your code runs inside on hosted Boardwalk. Apache-2.0. Public in **Phase 3** (before hosted-runner trust questions arise).
 >
-> Governing context: root [`MASTER_SPEC.md`](../MASTER_SPEC.md) §1, §9. Boardwalk Cloud's worker images derive from these public base images **by digest** — users can inspect the environment without the Cloud's private runtime layer being public.
+> Governing context: root [`MASTER_SPEC.md`](../MASTER_SPEC.md) §1, §9. the Boardwalk platform's worker images derive from these public base images **by digest** — users can inspect the environment without the platform's private runtime layer being public.
 
 ## 1. Purpose
 
@@ -24,7 +24,7 @@ Anyone running workflows on hosted compute should be able to answer: what OS, wh
 | `ghcr.io/boardwalk-dev/boardwalk-runner-linux:<version>` | `boardwalk/linux` | Base Linux + Node LTS + git + common build tooling |
 | Later: `-node`, `-python`, `-large` variants | `boardwalk/linux-*` | Ecosystem-specific toolchains |
 
-Tagging: semver tags + immutable digests for every published image; `latest` is never used in Cloud deployments.
+Tagging: semver tags + immutable digests for every published image; `latest` is never used in hosted deployments.
 
 ## 4. CI
 
@@ -34,5 +34,5 @@ Tagging: semver tags + immutable digests for every published image; `latest` is 
 ## 5. Ready to go public when
 
 1. The `boardwalk/linux` image builds, scans clean (per the triage policy), and publishes with SBOM + digest.
-2. Boardwalk Cloud's worker image consumes the published base **by digest**.
+2. the Boardwalk platform's worker image consumes the published base **by digest**.
 3. Image docs (§2) complete for every published image; publication checklist (MASTER_SPEC §8) passes.
