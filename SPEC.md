@@ -1,4 +1,4 @@
-# SPEC — `boardwalk-runner-images`
+# SPEC — `runner-images`
 
 > The public trust surface for hosted runner environments: exactly what your code runs inside on hosted Boardwalk. Apache-2.0. Public in **Phase 3** (before hosted-runner trust questions arise).
 >

@@ -1,4 +1,4 @@
-# Contributing to boardwalk-runner-images
+# Contributing to runner-images
 
 This repo is a trust surface, so contributions are judged on auditability as much as utility.
 

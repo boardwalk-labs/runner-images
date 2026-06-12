@@ -1,4 +1,4 @@
-# boardwalk-runner-images
+# runner-images
 
 The public trust surface for [Boardwalk](https://boardwalk.sh) hosted runners: **exactly what
 your code runs inside.** Image definitions, pinned versions, SBOMs, scan reports, and policy —
@@ -32,7 +32,7 @@ side by side. Versioning, scan gates, and deprecation windows: [POLICY.md](./POL
 
 - Not the engine ([`boardwalk`](https://github.com/boardwalk-labs/boardwalk)) — that runs the
   control plane on your hardware.
-- Not the self-hosted runner client ([`boardwalk-runner`](https://github.com/boardwalk-labs/boardwalk-runner))
+- Not the self-hosted runner client ([`runner`](https://github.com/boardwalk-labs/runner))
   — that executes Boardwalk-scheduled runs on your machines (and can use these images too).
 
 ## License
