@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  linux-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build boardwalk/linux
+        run: docker build -t boardwalk-runner-linux:ci images/linux
+      - name: Smoke-test the environment contract (offline — pins must not lazy-download)
+        run: |
+          docker run --rm --network none boardwalk-runner-linux:ci bash -c '
+            set -euo pipefail
+            node --version && pnpm --version && tsx --version
+            git --version && gh --version && python3 --version && jq --version
+            [ "$(whoami)" = "node" ]
+            [ "$PWD" = "/workspace" ] && touch /workspace/writable
+          '
+      - name: Generate SBOM (SPDX)
+        uses: anchore/sbom-action@v0
+        with:
+          image: boardwalk-runner-linux:ci
+          format: spdx-json
+          output-file: sbom.spdx.json
+          artifact-name: sbom-linux.spdx.json
+      - name: Vulnerability scan (gate on critical)
+        uses: anchore/scan-action@v6
+        with:
+          image: boardwalk-runner-linux:ci
+          severity-cutoff: critical
+          fail-build: true
+          output-format: table
