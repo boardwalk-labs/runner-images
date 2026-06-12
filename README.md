@@ -1,13 +1,13 @@
 # runner-images
 
-The public trust surface for [Boardwalk](https://boardwalk.sh) hosted runners: **exactly what
-your code runs inside.** Image definitions, pinned versions, SBOMs, scan reports, and policy —
-all public, all reproducible.
+Base image definitions for [Boardwalk](https://boardwalk.sh) hosted runners — the environment
+your workflow programs and shell steps execute in. Image sources, pinned versions, SBOMs, scan
+reports, and the versioning policy are all here and reproducible.
 
-The Boardwalk platform's worker images derive from these bases **by digest**. You can't see the platform's
-private runtime layer (it holds no secrets-relevant behavior — see the security model in the
-platform docs), but you can inspect every byte of the environment your programs and shell steps
-execute in.
+The hosted Boardwalk platform builds its worker images from these bases, pinned by digest, then
+adds a private runtime layer. That layer is not published, but it carries no secrets-relevant
+behavior (see the platform security docs); the base images in this repo define what your code
+sees at runtime, and you can build and inspect them yourself.
 
 ## Images
 
@@ -18,15 +18,15 @@ execute in.
 Planned variants: `boardwalk/linux-node`, `boardwalk/linux-python` (ecosystem toolchains),
 `boardwalk/linux-large` (same image, larger resources).
 
-## Verify it yourself
+## Build and inspect locally
 
 ```sh
 docker build -t boardwalk-runner-linux images/linux
-docker run --rm -it boardwalk-runner-linux bash    # poke around the exact environment
+docker run --rm -it boardwalk-runner-linux bash    # inspect the runtime environment
 ```
 
-Every release publishes the image digest, an SPDX SBOM, and the vulnerability scan report
-side by side. Versioning, scan gates, and deprecation windows: [POLICY.md](./POLICY.md).
+Every release publishes the image digest, an SPDX SBOM, and the vulnerability scan report.
+Versioning, scan gates, and deprecation windows are documented in [POLICY.md](./POLICY.md).
 
 ## What this repo is not
 
