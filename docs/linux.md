@@ -1,6 +1,6 @@
 # `boardwalk/linux`
 
-The default hosted-runner environment. Image: `ghcr.io/boardwalk-dev/boardwalk-runner-linux:<version>` (always referenced by digest in production).
+The default hosted-runner environment. Image: `ghcr.io/boardwalk-labs/boardwalk-runner-linux:<version>` (always referenced by digest in production).
 
 ## Installed tools
 

@@ -2,7 +2,7 @@
 
 ## Versioning
 
-- Images version with **semver tags** (`v1.4.0` → `ghcr.io/boardwalk-dev/boardwalk-runner-linux:1.4.0`).
+- Images version with **semver tags** (`v1.4.0` → `ghcr.io/boardwalk-labs/boardwalk-runner-linux:1.4.0`).
 - Every published image has an **immutable digest**; the Boardwalk platform (and anyone serious)
   references images **by digest**, never by tag. `latest` is never published.
 - **Major:** removed/replaced tools, default-user or filesystem-contract changes. **Minor:** added

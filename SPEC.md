@@ -21,7 +21,7 @@ Anyone running workflows on hosted compute should be able to answer: what OS, wh
 
 | Image | Label | Contents |
 |---|---|---|
-| `ghcr.io/boardwalk-dev/boardwalk-runner-linux:<version>` | `boardwalk/linux` | Base Linux + Node LTS + git + common build tooling |
+| `ghcr.io/boardwalk-labs/boardwalk-runner-linux:<version>` | `boardwalk/linux` | Base Linux + Node LTS + git + common build tooling |
 | Later: `-node`, `-python`, `-large` variants | `boardwalk/linux-*` | Ecosystem-specific toolchains |
 
 Tagging: semver tags + immutable digests for every published image; `latest` is never used in hosted deployments.

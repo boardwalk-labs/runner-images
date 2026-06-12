@@ -13,7 +13,7 @@ execute in.
 
 | Label | Image | Docs |
 | --- | --- | --- |
-| `boardwalk/linux` | `ghcr.io/boardwalk-dev/boardwalk-runner-linux:<version>` | [docs/linux.md](./docs/linux.md) |
+| `boardwalk/linux` | `ghcr.io/boardwalk-labs/boardwalk-runner-linux:<version>` | [docs/linux.md](./docs/linux.md) |
 
 Planned variants: `boardwalk/linux-node`, `boardwalk/linux-python` (ecosystem toolchains),
 `boardwalk/linux-large` (same image, larger resources).
@@ -30,9 +30,9 @@ side by side. Versioning, scan gates, and deprecation windows: [POLICY.md](./POL
 
 ## What this repo is not
 
-- Not the engine ([`boardwalk`](https://github.com/boardwalk-dev/boardwalk)) — that runs the
+- Not the engine ([`boardwalk`](https://github.com/boardwalk-labs/boardwalk)) — that runs the
   control plane on your hardware.
-- Not the self-hosted runner client ([`boardwalk-runner`](https://github.com/boardwalk-dev/boardwalk-runner))
+- Not the self-hosted runner client ([`boardwalk-runner`](https://github.com/boardwalk-labs/boardwalk-runner))
   — that executes Boardwalk-scheduled runs on your machines (and can use these images too).
 
 ## License
