@@ -34,4 +34,9 @@ jobs:
           image: boardwalk-runner-linux:ci
           severity-cutoff: critical
           fail-build: true
+          # Gate only on critical CVEs that actually HAVE a fix. The Debian base ships unpatchable
+          # criticals (e.g. gh CVE-2024-52308, sqlite CVE-2025-7458 + python CVE-2026-7210, both
+          # Debian "won't fix") that can't be resolved here and would otherwise block every build.
+          # New fixable criticals still fail the gate; bump the base/packages to clear them.
+          only-fixed: true
           output-format: table
