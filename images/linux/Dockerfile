@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+
 # boardwalk/linux — the default hosted-runner base image.
 #
 # This is the public trust surface: exactly the environment a workflow program (and anything it

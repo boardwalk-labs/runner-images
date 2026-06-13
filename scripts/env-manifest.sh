@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+
 #
 # Emit a deterministic manifest of what's installed in a runner image — the human-reviewable
 # "environment lock". The baseline lives at images/<image>/ENVIRONMENT.lock and CI regenerates it on
