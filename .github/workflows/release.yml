@@ -22,25 +22,31 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Resolve the image ref (the image tag is the semver WITHOUT the git tag's leading v)
+        id: meta
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER}/boardwalk-runner-linux:${version}" >> "$GITHUB_OUTPUT"
       - name: Build and push (with provenance)
         id: push
         uses: docker/build-push-action@v6
         with:
           context: images/linux
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/boardwalk-runner-linux:${{ github.ref_name }}
+          tags: ${{ steps.meta.outputs.image }}
           provenance: true
       - name: Generate SBOM of the pushed image
         uses: anchore/sbom-action@v0
         with:
-          image: ghcr.io/${{ github.repository_owner }}/boardwalk-runner-linux:${{ github.ref_name }}
+          image: ${{ steps.meta.outputs.image }}
           format: spdx-json
           output-file: sbom.spdx.json
       - name: Vulnerability scan report
         uses: anchore/scan-action@v6
         id: scan
         with:
-          image: ghcr.io/${{ github.repository_owner }}/boardwalk-runner-linux:${{ github.ref_name }}
+          image: ${{ steps.meta.outputs.image }}
           severity-cutoff: critical
           fail-build: true
           output-format: sarif
@@ -50,10 +56,10 @@ jobs:
           DIGEST: ${{ steps.push.outputs.digest }}
         run: |
           {
-            echo "Image: \`ghcr.io/${{ github.repository_owner }}/boardwalk-runner-linux:${GITHUB_REF_NAME}\`"
-            echo "Digest: \`${DIGEST}\`"
+            echo "Tag: \`${{ steps.meta.outputs.image }}\`"
+            echo "Pin by digest: \`${{ steps.meta.outputs.image }}@${DIGEST}\`"
             echo ""
-            echo "Pin by digest in anything that matters."
+            echo "Pin by digest in anything that matters; \`latest\` is never published."
           } > notes.md
           gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md \
             sbom.spdx.json "${{ steps.scan.outputs.sarif }}"
