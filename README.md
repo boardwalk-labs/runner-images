@@ -23,10 +23,16 @@ Planned variants: `boardwalk/linux-node`, `boardwalk/linux-python` (ecosystem to
 ```sh
 docker build -t boardwalk-runner-linux images/linux
 docker run --rm -it boardwalk-runner-linux bash    # inspect the runtime environment
+
+# Regenerate the committed environment lock after any image change (CI fails on drift):
+scripts/env-manifest.sh boardwalk-runner-linux > images/linux/ENVIRONMENT.lock
 ```
 
+`images/linux/ENVIRONMENT.lock` is the human-reviewable list of pinned OS packages and tools; CI
+re-derives it on every PR and fails if it drifts, so an environment change lands as a reviewed diff.
 Every release publishes the image digest, an SPDX SBOM, and the vulnerability scan report.
-Versioning, scan gates, and deprecation windows are documented in [POLICY.md](./POLICY.md).
+Versioning, scan gates, triage, and deprecation windows are documented in
+[POLICY.md](./POLICY.md) and [SECURITY_TRIAGE.md](./SECURITY_TRIAGE.md).
 
 ## What this repo is not
 

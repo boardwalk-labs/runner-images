@@ -28,7 +28,11 @@ Tagging: semver tags + immutable digests for every published image; `latest` is 
 
 ## 4. CI
 
-- Every PR: image builds reproducibly, SBOM diff posted to the PR, scanner gate (new criticals block).
+- Every PR: image builds reproducibly + an offline contract smoke test; the committed
+  `ENVIRONMENT.lock` (pinned packages + tools) is re-derived and must match the built image — an
+  environment change fails the build until it's regenerated and committed, so the diff is reviewed in
+  the PR itself; the SBOM is regenerated as an artifact; the scanner gates fixable criticals and
+  reports highs for triage (see POLICY.md / SECURITY_TRIAGE.md).
 - Every release: push by digest, publish SBOM + scan report + release notes together.
 
 ## 5. Ready to go public when

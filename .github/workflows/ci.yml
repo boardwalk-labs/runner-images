@@ -21,6 +21,25 @@ jobs:
             [ "$(whoami)" = "node" ]
             [ "$PWD" = "/workspace" ] && touch /workspace/writable
           '
+      - name: Environment lock — fail on drift (the env change IS the PR diff)
+        run: |
+          scripts/env-manifest.sh boardwalk-runner-linux:ci > /tmp/ENVIRONMENT.lock
+          if ! diff -u images/linux/ENVIRONMENT.lock /tmp/ENVIRONMENT.lock > /tmp/env.diff; then
+            {
+              echo "### Runner environment changed"
+              echo "The built image no longer matches \`images/linux/ENVIRONMENT.lock\`."
+              echo "Regenerate and commit it so the change is reviewed in this PR:"
+              echo '```'
+              echo "scripts/env-manifest.sh <built-image> > images/linux/ENVIRONMENT.lock"
+              echo '```'
+              echo '```diff'
+              cat /tmp/env.diff
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Environment lock out of date — regenerate images/linux/ENVIRONMENT.lock (see job summary)"
+            exit 1
+          fi
+          echo "Environment lock matches the built image." >> "$GITHUB_STEP_SUMMARY"
       - name: Generate SBOM (SPDX)
         uses: anchore/sbom-action@v0
         with:
@@ -28,15 +47,25 @@ jobs:
           format: spdx-json
           output-file: sbom.spdx.json
           artifact-name: sbom-linux.spdx.json
-      - name: Vulnerability scan (gate on critical)
+      - name: Vulnerability scan (gate on fixable criticals)
         uses: anchore/scan-action@v6
         with:
           image: boardwalk-runner-linux:ci
           severity-cutoff: critical
           fail-build: true
-          # Gate only on critical CVEs that actually HAVE a fix. The Debian base ships unpatchable
-          # criticals (e.g. gh CVE-2024-52308, sqlite CVE-2025-7458 + python CVE-2026-7210, both
-          # Debian "won't fix") that can't be resolved here and would otherwise block every build.
-          # New fixable criticals still fail the gate; bump the base/packages to clear them.
+          # Gate on critical CVEs that actually HAVE a fix. `only-fixed` excludes the Debian base's
+          # unpatchable "won't fix" CVEs (documented in SECURITY_TRIAGE.md) that can't be resolved
+          # here and would otherwise block every build. A new FIXABLE critical fails the gate — bump
+          # the base/packages to clear it. Highs are reported (next step) + triaged, not hard-gated:
+          # the npm toolchain's vendored deps carry a steady stream of fixable highs that lag
+          # upstream and aren't reachable in the runner threat model. See POLICY.md / SECURITY_TRIAGE.md.
           only-fixed: true
+          output-format: table
+      - name: Vulnerability report — high severity (informational, triaged)
+        uses: anchore/scan-action@v6
+        with:
+          image: boardwalk-runner-linux:ci
+          severity-cutoff: high
+          only-fixed: true
+          fail-build: false # reported for triage, never blocks — see SECURITY_TRIAGE.md
           output-format: table

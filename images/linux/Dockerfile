@@ -1,8 +1,9 @@
 # boardwalk/linux — the default hosted-runner base image.
 #
 # This is the public trust surface: exactly the environment a workflow program (and anything it
-# shells out to) runs inside on Boardwalk's hosted `boardwalk/linux` runners. Boardwalk Cloud's
-# private worker layer derives FROM this image by digest; nothing in this file is Cloud-specific.
+# shells out to) runs inside on Boardwalk's hosted `boardwalk/linux` runners. The Boardwalk
+# platform's private worker layer derives FROM this image by digest; nothing in this file is
+# platform-specific.
 #
 # Pinning policy (see ../../POLICY.md): the parent image is pinned by digest, every tool by
 # version. Upgrades are explicit, reviewed diffs — never `latest`.

@@ -7,7 +7,7 @@ The default hosted-runner environment. Image: `ghcr.io/boardwalk-labs/boardwalk-
 | Tool | Source | Version policy |
 | --- | --- | --- |
 | Node.js 24 (LTS) + npm | parent image `node:24-bookworm-slim` (pinned by digest) | parent digest bump = reviewed PR |
-| pnpm | corepack, pinned `ARG PNPM_VERSION` | explicit bump |
+| pnpm | npm global install, pinned `ARG PNPM_VERSION` (NOT corepack — it lazy-downloads at run time) | explicit bump |
 | tsx | npm, pinned `ARG TSX_VERSION` | explicit bump |
 | git, curl, jq, tar, unzip, xz | Debian bookworm packages | follows parent digest |
 | python3 (3.11), pip, venv | Debian bookworm packages | follows parent digest |

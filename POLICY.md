@@ -14,17 +14,28 @@
 ## SBOM and provenance
 
 Every release publishes, together: the image (by digest), its SBOM (SPDX, generated at build),
-and build provenance. CI regenerates the SBOM on every PR and posts the diff, so "what changed
-in the environment" is answerable from the PR alone.
+and build provenance. "What changed in the environment" is answerable from the PR alone two ways:
+every PR regenerates the SBOM (uploaded as a build artifact), and a committed package-level
+**environment lock** (`images/<image>/ENVIRONMENT.lock` — pinned OS packages + tools, produced by
+`scripts/env-manifest.sh`) is **re-derived in CI and must match the built image**, so any change to
+the environment fails the build until it's regenerated and committed — landing the diff in the PR's
+own files for review.
 
 ## Vulnerability policy
 
 - Every PR and every release is scanned; the scan report publishes with the release.
-- **Gate:** new *critical* findings block merge/release. *High* findings block release unless
-  triaged below.
-- **Triage:** a finding may be accepted with an entry in `SECURITY_TRIAGE.md` stating the CVE,
-  why it doesn't apply (not reachable / no fixed version upstream / mitigated by the runner
-  sandbox), and a revisit date. Untriaged highs don't ship.
+- **Gate:** a new *fixable* **critical** finding blocks merge/release. Clear it by bumping the
+  parent digest or the pinned tool (then regenerate `ENVIRONMENT.lock`).
+- **High findings** are reported on every run (an informational scan step) and **triaged** in
+  `SECURITY_TRIAGE.md`, but don't hard-block: the npm toolchain's vendored deps carry fixable highs
+  that lag upstream and aren't reachable in the runner threat model. Hard-gating them would break CI
+  on upstream lag, not on real exposure.
+- **Won't-fix findings** (no upstream fixed version, e.g. some Debian-base CVEs) are excluded by the
+  scanner's `--only-fixed` and the notable ones are documented in `SECURITY_TRIAGE.md` so they stay
+  visible.
+- **Triage:** every entry in `SECURITY_TRIAGE.md` states the CVE, why it's accepted (not reachable /
+  no upstream fix / mitigated by the sandbox), and a revisit condition. Making a *fixable critical*
+  non-blocking additionally requires an explicit, time-boxed scanner ignore rule.
 - Security-only patch releases rebuild on the latest parent digest and ship as `x.y.z+1`.
 
 ## Deprecation
