@@ -44,6 +44,8 @@ CPU/memory/timeout are not baked into the image; they come from the run's manife
 
 ## Compatibility notes
 
+- Published for **`linux/amd64` and `linux/arm64`** — the release tag/digest is a multi-arch index,
+  so a pull (or a `FROM` by digest) resolves to your platform's variant.
 - Debian bookworm / glibc — binaries built for musl (Alpine) may not run.
 - `python` (unversioned) is not aliased; use `python3`.
 - Node global installs land in the image's npm prefix and are not writable at run time; install
