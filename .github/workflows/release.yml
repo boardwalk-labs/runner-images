@@ -42,13 +42,24 @@ jobs:
           image: ${{ steps.meta.outputs.image }}
           format: spdx-json
           output-file: sbom.spdx.json
-      - name: Vulnerability scan report
+      - name: Vulnerability gate (fixable criticals block the release)
+        uses: anchore/scan-action@v6
+        with:
+          image: ${{ steps.meta.outputs.image }}
+          severity-cutoff: critical
+          # only-fixed mirrors ci.yml + POLICY.md: the Debian base ships unpatchable "won't fix"
+          # criticals (documented in SECURITY_TRIAGE.md) that can't be resolved here; gate only on
+          # criticals that HAVE a fix. (CI had this; the release step did not — it blocked the cut.)
+          only-fixed: true
+          fail-build: true
+          output-format: table
+      - name: Vulnerability scan report (full, attached to the release)
         uses: anchore/scan-action@v6
         id: scan
         with:
           image: ${{ steps.meta.outputs.image }}
-          severity-cutoff: critical
-          fail-build: true
+          severity-cutoff: high
+          fail-build: false # the report is published for transparency, never blocks
           output-format: sarif
       - name: Create the GitHub release with digest + SBOM + scan
         env:
