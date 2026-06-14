@@ -13,7 +13,7 @@ jobs:
   linux-image:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build boardwalk/linux
         run: docker build -t boardwalk-runner-linux:ci images/linux
       - name: Smoke-test the environment contract (offline — pins must not lazy-download)
