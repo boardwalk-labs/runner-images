@@ -15,8 +15,24 @@ sees at runtime, and you can build and inspect them yourself.
 | --- | --- | --- |
 | `boardwalk/linux` | `ghcr.io/boardwalk-labs/boardwalk-runner-linux:<version>` | [docs/linux.md](./docs/linux.md) |
 
-Planned variants: `boardwalk/linux-node`, `boardwalk/linux-python` (ecosystem toolchains),
-`boardwalk/linux-large` (same image, larger resources).
+## Planned images
+
+Roadmap, not yet published. A variant ships only once it's a genuinely distinct environment (not a
+reskin of the base) and the hosted scheduler can route to its label. Until then, a workflow needing
+more installs it per-run (subject to the run's egress policy) or uses a custom image. Shapes below
+are intent, not a commitment.
+
+| Label | Intended to add (beyond the base) | Status |
+| --- | --- | --- |
+| `boardwalk/linux-node` | A Node-centric toolchain: extra package managers and multiple Node lines, past the base's single Node 24 | Planned |
+| `boardwalk/linux-python` | Pinned multi-version CPython plus a modern installer (uv / poetry), past the base's `python3` | Planned |
+
+`boardwalk/linux-large` is intentionally not here: it's `boardwalk/linux` at a larger runner size
+(a per-run resource selector), not a separate image.
+
+Have a variant you'd actually run? Open a feature request (see [CONTRIBUTING.md](./CONTRIBUTING.md)).
+A strong proposal names the tools, why a meaningful share of workflows need them, and why they don't
+belong in the base.
 
 ## Build and inspect locally
 

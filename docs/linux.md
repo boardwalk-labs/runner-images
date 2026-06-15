@@ -40,7 +40,8 @@ self-hosted runners inherit your network). TLS roots come from `ca-certificates`
 ## Resource limits
 
 CPU/memory/timeout are not baked into the image; they come from the run's manifest (`budget`,
-`runs_on` size) and are enforced by the platform running the container.
+`runs_on` size) and are enforced by the platform running the container. The `boardwalk/linux-large`
+label is this same image at a larger size: a per-run resource selector, not a separate image.
 
 ## Compatibility notes
 
