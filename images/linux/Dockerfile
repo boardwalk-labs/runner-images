@@ -15,6 +15,9 @@ FROM node:24-bookworm-slim@sha256:2c87ef9bd3c6a3bd4b472b4bec2ce9d16354b0c574f736
 ARG GH_VERSION=2.94.0
 ARG PNPM_VERSION=10.23.0
 ARG TSX_VERSION=4.22.4
+ARG TYPESCRIPT_VERSION=5.9.3
+# The TypeScript language server powers the agent's LSP diagnostics (`typescript-language-server --stdio`).
+ARG TS_LANGUAGE_SERVER_VERSION=5.3.0
 
 # OS packages: the userland workflow shell steps actually reach for. --no-install-recommends +
 # a cleaned apt cache keep the surface (and the SBOM) small.
@@ -42,11 +45,14 @@ RUN arch="$(dpkg --print-architecture)" \
   && rm /tmp/gh.deb \
   && gh --version
 
-# JS toolchain: pnpm + tsx, installed into the image's global npm prefix. Deliberately NOT via
-# corepack — corepack resolves through per-$HOME state and will download an unpinned version at
-# run time (runs set HOME=/workspace), which breaks both pinning and offline runs.
+# JS toolchain: pnpm + tsx + the TypeScript compiler and language server, installed into the image's
+# global npm prefix. typescript-language-server (with a global tsserver via typescript) gives the
+# agent LSP diagnostics for any workspace, even one without its own TypeScript install. Deliberately
+# NOT via corepack — corepack resolves through per-$HOME state and will download an unpinned version
+# at run time (runs set HOME=/workspace), which breaks both pinning and offline runs.
 RUN npm install -g "pnpm@${PNPM_VERSION}" "tsx@${TSX_VERSION}" \
-  && pnpm --version && tsx --version
+  "typescript@${TYPESCRIPT_VERSION}" "typescript-language-server@${TS_LANGUAGE_SERVER_VERSION}" \
+  && pnpm --version && tsx --version && tsc --version && typescript-language-server --version
 
 # /workspace is the per-run working directory contract: writable by the default user, HOME and
 # cwd for hosted runs. The engine/worker layer above this image owns hydration + persistence.
