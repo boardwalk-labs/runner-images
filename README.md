@@ -6,8 +6,8 @@ reports, and the versioning policy are all here and reproducible.
 
 The hosted Boardwalk platform builds its worker images from these bases, pinned by digest, then
 adds a private runtime layer. That layer is not published, but it carries no secrets-relevant
-behavior (see the platform security docs); the base images in this repo define what your code
-sees at runtime, and you can build and inspect them yourself.
+behavior: the base images in this repo define what your code sees at runtime, and you can build
+and inspect them yourself.
 
 ## Images
 
