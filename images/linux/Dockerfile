@@ -29,9 +29,10 @@ ENV LANG=C.UTF-8
 
 # OS packages: the userland workflow shell steps actually reach for, plus a C/C++ toolchain
 # (build-essential + python3-dev) so `npm install` of native modules and `pip install` of packages
-# with C extensions can compile instead of failing with "make: not found". git-lfs is registered
-# system-wide so LFS clones fetch real content, not pointer files. --no-install-recommends +
-# a cleaned apt cache keep the surface (and the SBOM) small.
+# with C extensions can compile instead of failing with "make: not found". --no-install-recommends +
+# a cleaned apt cache keep the surface (and the SBOM) small. (git-lfs is intentionally NOT here: the
+# Debian package is built with an ancient Go that fails the fixable-critical CVE gate; re-add it as a
+# pinned upstream binary built with current Go, like gh/rg/uv, if LFS support is needed.)
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
   bash \
@@ -40,7 +41,6 @@ RUN apt-get update \
   curl \
   file \
   git \
-  git-lfs \
   jq \
   less \
   openssh-client \
@@ -55,8 +55,7 @@ RUN apt-get update \
   wget \
   xz-utils \
   zip \
-  && rm -rf /var/lib/apt/lists/* \
-  && git lfs install --system
+  && rm -rf /var/lib/apt/lists/*
 
 # GitHub CLI — pinned release artifact (no third-party apt repo in the trust surface).
 RUN arch="$(dpkg --print-architecture)" \

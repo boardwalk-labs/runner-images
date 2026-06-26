@@ -52,7 +52,6 @@ gcc-12	12.2.0-14+deb12u1
 gcc-12-base	12.2.0-14+deb12u1
 gh	2.94.0
 git	1:2.39.5-0+deb12u3
-git-lfs	3.3.0-1+deb12u1
 git-man	1:2.39.5-0+deb12u3
 gpgv	2.2.40-1.1+deb12u2
 grep	3.8-5
