@@ -31,6 +31,8 @@ run '
   printf "gh\t%s\n"      "$(gh --version | head -1 | awk "{print \$3}")"
   printf "python3\t%s\n" "$(python3 --version | awk "{print \$2}")"
   printf "git\t%s\n"     "$(git --version | awk "{print \$3}")"
+  printf "rg\t%s\n"      "$(rg --version | head -1 | awk "{print \$2}")"
+  printf "uv\t%s\n"      "$(uv --version | awk "{print \$2}")"
 ' | sort
 echo
 
