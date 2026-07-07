@@ -23,7 +23,10 @@ TIMEOUT_S="${SMOKE_TIMEOUT_S:-90}"
 
 [ "$(uname -s)" = "Linux" ] || { echo "smoke_boot: needs a Linux host (KVM + GNU cp)" >&2; exit 1; }
 command -v firecracker >/dev/null || { echo "smoke_boot: firecracker not on PATH" >&2; exit 1; }
-[ -r /dev/kvm ] && [ -w /dev/kvm ] || { echo "smoke_boot: /dev/kvm not accessible" >&2; exit 1; }
+if [ ! -r /dev/kvm ] || [ ! -w /dev/kvm ]; then
+  echo "smoke_boot: /dev/kvm not accessible" >&2
+  exit 1
+fi
 
 if [ -n "${SMOKE_SCRATCH_DIR:-}" ]; then
   SCRATCH="$(mktemp -d -p "$SMOKE_SCRATCH_DIR")"
