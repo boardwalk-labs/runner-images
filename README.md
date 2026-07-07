@@ -34,6 +34,14 @@ Have a variant you'd actually run? Open a feature request (see [CONTRIBUTING.md]
 A strong proposal names the tools, why a meaningful share of workflows need them, and why they don't
 belong in the base.
 
+## Firecracker guest artifacts
+
+Hosted runners are moving onto a Firecracker microVM substrate, which boots a **kernel** and an
+**ext4 rootfs** instead of a container. The recipes for both — a pinned minimal guest kernel with
+a verified required-capability set, an OCI→ext4 flattener for the runner images above, and a
+smoke-boot gate — live in [`guest/`](./guest/README.md). Same trust story as the container
+images: what your code runs inside is defined here and reproducible.
+
 ## Build and inspect locally
 
 ```sh
