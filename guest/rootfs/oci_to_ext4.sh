@@ -34,18 +34,28 @@ rm -f "$OUT"
 truncate -s "${SIZE_MB}M" "$OUT"
 mkfs.ext4 -q -F -L bwroot "$OUT"
 
-CID="$(docker create --platform linux/amd64 "$IMAGE" /bin/true)"
-MNT="$(mktemp -d)"
+# Install the trap before creating anything it cleans up, so a failure between the two
+# steps (e.g. mktemp) can't leak the container.
+CID=""
+MNT=""
 cleanup() {
-  sudo umount "$MNT" 2>/dev/null || true
-  rmdir "$MNT" 2>/dev/null || true
-  docker rm -f "$CID" >/dev/null 2>&1 || true
+  if [ -n "$MNT" ]; then
+    sudo umount "$MNT" 2>/dev/null || true
+    rmdir "$MNT" 2>/dev/null || true
+  fi
+  if [ -n "$CID" ]; then
+    docker rm -f "$CID" >/dev/null 2>&1 || true
+  fi
 }
 trap cleanup EXIT
+CID="$(docker create --platform linux/amd64 "$IMAGE" /bin/true)"
+MNT="$(mktemp -d)"
 
 sudo mount -o loop "$OUT" "$MNT"
 echo "== exporting image filesystem =="
-docker export "$CID" | sudo tar -x -C "$MNT" --numeric-owner
+# --xattrs: preserve extended attributes (file capabilities, security labels) — a setcap'd
+# binary that works in the container lane must not silently lose its caps in the microVM lane.
+docker export "$CID" | sudo tar -x -C "$MNT" --numeric-owner --xattrs --xattrs-include='*'
 # Mount points the guest init expects to exist on the read-only base.
 sudo mkdir -p "$MNT/proc" "$MNT/sys" "$MNT/dev" "$MNT/workspace"
 sudo umount "$MNT"

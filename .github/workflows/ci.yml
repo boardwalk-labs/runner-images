@@ -10,6 +10,18 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
+  guest-scripts:
+    # Static checks for the Firecracker guest recipes (guest/). The full kernel build + smoke
+    # boot need hours + KVM and publish separately (guest/README.md "Publishing"); this keeps
+    # the scripts themselves from rotting in the meantime.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: shellcheck + syntax
+        run: |
+          shellcheck guest/kernel/build_kernel.sh guest/rootfs/oci_to_ext4.sh guest/smoke_boot.sh
+          bash -n guest/kernel/build_kernel.sh guest/rootfs/oci_to_ext4.sh guest/smoke_boot.sh
+
   linux-image:
     runs-on: ubuntu-latest
     steps:

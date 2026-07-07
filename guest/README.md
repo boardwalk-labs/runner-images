@@ -3,7 +3,10 @@
 Recipes for the artifacts a Boardwalk hosted runner needs when it executes inside a
 **Firecracker microVM** instead of a container: a guest **kernel** and an **ext4 rootfs**
 flattened from a runner OCI image. Same trust story as the container images ([SPEC](../SPEC.md)):
-what your code runs inside is defined here, pinned, and reproducible by anyone.
+what your code runs inside is defined here, pinned, and rebuildable by anyone. (Rebuildable, not
+bit-reproducible: the KBUILD identity stamps are pinned but the host toolchain is not, so two
+builders can get different hashes of a byte-equivalent-in-behavior kernel. The CI build is the
+canonical artifact.)
 
 Firecracker boots a kernel directly (no bootloader, no disk image with a boot partition), so the
 guest is exactly these two files plus an init process:
@@ -20,20 +23,26 @@ the public substrate under it.
 ## Kernel
 
 ```sh
-guest/kernel/build_kernel.sh          # → guest/kernel/dist/vmlinux-<version> (+ .sha256)
+guest/kernel/build_kernel.sh          # → guest/kernel/dist/vmlinux-<version> (+ .sha256 + .config)
 ```
 
 Pins (override via env):
 
-- `KERNEL_VERSION` — a kernel.org 6.1.x LTS release (default pinned in the script).
-- `FC_TAG` — the Firecracker release whose CI guest config is used as the base config
-  (`resources/guest_configs/microvm-kernel-ci-x86_64-6.1.config`). Using Firecracker's own CI
-  config means the device set matches what Firecracker actually emulates and tests against.
+- `KERNEL_VERSION` + `KERNEL_SHA256` — a kernel.org 6.1.x LTS release and the sha256 of its
+  tarball (from kernel.org's signed `sha256sums.asc`). The source download is
+  integrity-verified before anything is built; bumping the version means bumping both.
+- `FC_COMMIT` (with `FC_TAG` as the human-readable name) — the Firecracker release whose CI guest
+  config is used as the base config
+  (`resources/guest_configs/microvm-kernel-ci-x86_64-6.1.config`), pinned to the commit the tag
+  pointed to when it was vetted — tags can be force-moved, commits cannot. Using Firecracker's
+  own CI config means the device set matches what Firecracker actually emulates and tests against.
 
 After `make olddefconfig`, the build **fails unless every option in
 [`required.config`](./kernel/required.config) is set** — the options the runner substrate depends
-on (virtio net/blk/vsock/rng, ext4, ACPI + VMGenID for snapshot-restore reseeding, overlayfs).
-That assert is the contract: bumping either pin cannot silently drop a required capability.
+on (virtio net/blk/vsock/rng, ext4, ACPI + VMGenID for snapshot-restore reseeding, overlayfs +
+tmpfs, devtmpfs device nodes, the ttyS0 serial console, sysrq, kvmclock). That assert is the
+contract: bumping either pin cannot silently drop a required capability. The exact resolved
+config that produced a kernel is archived beside it as `vmlinux-<version>.config`.
 
 Build host requirements: x86_64 Linux, the usual kernel build deps (`gcc make flex bison bc
 elfutils-libelf-devel openssl-devel perl` on Fedora/AL2023; the script checks and names anything
@@ -59,12 +68,14 @@ why `required.config` demands overlayfs); the recipe itself just produces the ba
 guest/smoke_boot.sh guest/kernel/dist/vmlinux-<version> rootfs.ext4
 ```
 
-Boots the pair in a throwaway microVM (needs `firecracker` on `$PATH` and `/dev/kvm`), with a
-temporary init injected into a scratch copy of the rootfs. Passes when the guest reaches
-userspace on the ext4 root with a writable overlay-capable kernel, enumerates its virtio devices
-(root disk + vsock), and finds `/dev/vsock`. This is the recipe-level gate; deeper checks
-(vsock round-trips, snapshot/restore, VMGenID reseed observation) belong to the platform's
-runtime tests, not the image recipes.
+Boots the pair in a throwaway microVM (needs `firecracker` on `$PATH`, `/dev/kvm`, and a rootfs
+with a POSIX `/bin/sh`), with a temporary init injected into a scratch copy of the rootfs. Passes
+when the guest reaches userspace on the ext4 root, enumerates its virtio devices (root disk +
+vsock), finds `/dev/vsock`, offers overlayfs + tmpfs (the production read-only-base + writable-
+overlay mount shape), and can power itself off (a guest that wedges at shutdown fails). Set
+`SMOKE_SCRATCH_DIR` if `/tmp` is a tmpfs — the scratch rootfs copy is full-size. This is the
+recipe-level gate; deeper checks (vsock round-trips, snapshot/restore, VMGenID reseed
+observation) belong to the platform's runtime tests, not the image recipes.
 
 ## Publishing
 

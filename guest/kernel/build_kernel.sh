@@ -8,13 +8,20 @@
 # required.config — the build FAILS if a required capability is missing, which is the guard
 # that a pin bump can't silently drop something the runner substrate depends on.
 #
-# Usage: guest/kernel/build_kernel.sh          # → guest/kernel/dist/vmlinux-<version> (+ .sha256)
-# Pins:  KERNEL_VERSION (kernel.org 6.1.x LTS), FC_TAG (Firecracker release for the base config)
+# Usage: guest/kernel/build_kernel.sh          # → guest/kernel/dist/vmlinux-<version> (+ .sha256 + .config)
+# Pins:  KERNEL_VERSION + KERNEL_SHA256 (kernel.org 6.1.x LTS — override BOTH together),
+#        FC_COMMIT (Firecracker release for the base config, pinned to the commit the tag
+#        pointed to when vetted — a tag can be force-moved, a commit SHA cannot)
 
 set -euo pipefail
 
 KERNEL_VERSION="${KERNEL_VERSION:-6.1.155}"
-FC_TAG="${FC_TAG:-v1.16.0}"
+# sha256 of linux-$KERNEL_VERSION.tar.xz, from kernel.org's signed sha256sums.asc. The kernel is
+# the single most security-critical artifact this repo produces — TLS alone is not an integrity
+# story for it. Overriding KERNEL_VERSION requires overriding this in the same breath.
+KERNEL_SHA256="${KERNEL_SHA256:-c29387aeee085fbcbd91236224b9df805063bac43615e75cea2c6b29604a5c73}"
+FC_TAG="${FC_TAG:-v1.16.0}"                                        # for humans + logs
+FC_COMMIT="${FC_COMMIT:-d83d72b710361a10294480131377b1b00b163af8}" # v1.16.0 at vetting time
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 BUILD="$HERE/build"
@@ -44,19 +51,25 @@ if [ ! -d "$SRC" ]; then
   echo "== fetching linux-$KERNEL_VERSION =="
   curl -fsSL -o "$BUILD/linux-$KERNEL_VERSION.tar.xz" \
     "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-$KERNEL_VERSION.tar.xz"
+  (cd "$BUILD" && echo "$KERNEL_SHA256  linux-$KERNEL_VERSION.tar.xz" | sha256sum -c -) || {
+    echo "build_kernel: linux-$KERNEL_VERSION.tar.xz failed sha256 verification — refusing to build." >&2
+    echo "If you bumped KERNEL_VERSION, set KERNEL_SHA256 from kernel.org's sha256sums.asc too." >&2
+    rm -f "$BUILD/linux-$KERNEL_VERSION.tar.xz"
+    exit 1
+  }
   tar -C "$BUILD" -xf "$BUILD/linux-$KERNEL_VERSION.tar.xz"
 fi
 
-echo "== base config: Firecracker $FC_TAG CI microvm config =="
+echo "== base config: Firecracker $FC_TAG CI microvm config (commit $FC_COMMIT) =="
 curl -fsSL -o "$SRC/.config" \
-  "https://raw.githubusercontent.com/firecracker-microvm/firecracker/$FC_TAG/resources/guest_configs/microvm-kernel-ci-x86_64-6.1.config"
+  "https://raw.githubusercontent.com/firecracker-microvm/firecracker/$FC_COMMIT/resources/guest_configs/microvm-kernel-ci-x86_64-6.1.config"
 make -C "$SRC" olddefconfig
 
 echo "== verifying required options =="
 absent=()
 while IFS= read -r line; do
   case "$line" in ""|"#"*) continue ;; esac
-  grep -qx "$line" "$SRC/.config" || absent+=("$line")
+  grep -qxF "$line" "$SRC/.config" || absent+=("$line")
 done <"$REQUIRED"
 if [ "${#absent[@]}" -gt 0 ]; then
   printf 'build_kernel: required option(s) missing from the resolved .config:\n' >&2
@@ -66,9 +79,18 @@ if [ "${#absent[@]}" -gt 0 ]; then
 fi
 
 echo "== building vmlinux (-j$(nproc)) =="
-make -C "$SRC" -j"$(nproc)" vmlinux
+# Pin the KBUILD identity stamps so rebuilds don't differ just by who/when/where. The host
+# toolchain (gcc) is still unpinned, so this is auditable-rebuildable, not bit-reproducible;
+# the CI build is the canonical artifact.
+make -C "$SRC" -j"$(nproc)" \
+  KBUILD_BUILD_TIMESTAMP="linux-$KERNEL_VERSION" \
+  KBUILD_BUILD_USER=boardwalk KBUILD_BUILD_HOST=runner-images \
+  vmlinux
 
 OUT="$DIST/vmlinux-$KERNEL_VERSION"
 cp "$SRC/vmlinux" "$OUT"
+# Archive the resolved config beside the kernel: given a published vmlinux there must be an
+# exact record of the config that produced it (the base config URL alone can't promise that).
+cp "$SRC/.config" "$OUT.config"
 (cd "$DIST" && sha256sum "vmlinux-$KERNEL_VERSION" | tee "vmlinux-$KERNEL_VERSION.sha256")
 echo "OK $OUT"
