@@ -5,8 +5,10 @@ Recipes for the artifacts a Boardwalk hosted runner needs when it executes insid
 flattened from a runner OCI image. Same trust story as the container images ([SPEC](../SPEC.md)):
 what your code runs inside is defined here, pinned, and rebuildable by anyone. (Rebuildable, not
 bit-reproducible: the KBUILD identity stamps are pinned but the host toolchain is not, so two
-builders can get different hashes of a byte-equivalent-in-behavior kernel. The CI build is the
-canonical artifact.)
+builders can get different hashes of a byte-equivalent-in-behavior kernel. Once publishing is
+wired up — see [Publishing](#publishing) — the CI build is the canonical artifact; until then
+the `.sha256` + archived `.config` emitted beside each hand-built artifact are the record of
+what was built.)
 
 Firecracker boots a kernel directly (no bootloader, no disk image with a boot partition), so the
 guest is exactly these two files plus an init process:
@@ -51,13 +53,17 @@ missing). Takes a few minutes on 8 vCPUs.
 ## Rootfs
 
 ```sh
-guest/rootfs/oci_to_ext4.sh ghcr.io/boardwalk-labs/boardwalk-runner-linux:<version> rootfs.ext4
+guest/rootfs/oci_to_ext4.sh ghcr.io/boardwalk-labs/boardwalk-runner-linux@sha256:<digest> rootfs.ext4
 ```
 
 Flattens the image's filesystem (`docker export`) into a fresh ext4 file, auto-sized from the
 image with headroom (override with a third `size-mb` argument). Runs on x86_64 Linux
 (needs `docker` and `sudo` for the loop mount). The image is pulled `--platform linux/amd64`:
 Firecracker guests here are x86_64.
+
+The rootfs is only as pinned as its input, so canonical builds take the image **by digest**
+(`@sha256:...` — a tag can move, a digest cannot); the script warns on a tag-only ref. A plain
+`:<version>` tag is fine for local iteration.
 
 At runtime the platform mounts the rootfs **read-only with a per-VM writable overlay** (that is
 why `required.config` demands overlayfs); the recipe itself just produces the base filesystem.

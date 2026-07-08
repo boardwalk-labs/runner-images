@@ -81,7 +81,8 @@ fi
 echo "== building vmlinux (-j$(nproc)) =="
 # Pin the KBUILD identity stamps so rebuilds don't differ just by who/when/where. The host
 # toolchain (gcc) is still unpinned, so this is auditable-rebuildable, not bit-reproducible;
-# the CI build is the canonical artifact.
+# the CI build becomes the canonical artifact once publishing is wired up (README
+# "Publishing") — until then the .sha256 + archived .config beside each build are the record.
 make -C "$SRC" -j"$(nproc)" \
   KBUILD_BUILD_TIMESTAMP="linux-$KERNEL_VERSION" \
   KBUILD_BUILD_USER=boardwalk KBUILD_BUILD_HOST=runner-images \

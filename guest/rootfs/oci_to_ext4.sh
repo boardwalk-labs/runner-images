@@ -22,6 +22,14 @@ SIZE_MB="${3:-}"
 [ "$(uname -sm)" = "Linux x86_64" ] || { echo "oci_to_ext4: needs x86_64 Linux" >&2; exit 1; }
 command -v docker >/dev/null || { echo "oci_to_ext4: docker is required" >&2; exit 1; }
 
+# The rootfs is only as pinned as its input: a tag can move between builds, a digest cannot.
+# Warn (not fail — local iteration on a just-built tag is legitimate) so a canonical build
+# without @sha256 is a conscious choice, never an accident.
+case "$IMAGE" in
+*@sha256:*) ;;
+*) echo "oci_to_ext4: WARNING: image ref is not digest-pinned (@sha256:...) — the output is only as reproducible as this tag" >&2 ;;
+esac
+
 echo "== pulling $IMAGE (linux/amd64) =="
 docker pull --platform linux/amd64 "$IMAGE"
 
