@@ -1,6 +1,5 @@
-# Publish the runner base images to GHCR on a version tag (v1.4.0 → :1.4.0), by digest, each with the
-# SBOM and scan report attached to the GitHub release. See POLICY.md for what a release must contain.
-# One tag releases every image (linux + linux-desktop) at the same version.
+# Publish boardwalk/linux to GHCR on a version tag (v1.4.0 → :1.4.0), by digest, with the SBOM
+# and scan report attached to the GitHub release. See POLICY.md for what a release must contain.
 
 name: Release
 
@@ -83,79 +82,3 @@ jobs:
           } > notes.md
           gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md \
             sbom.spdx.json "${{ steps.scan.outputs.sarif }}"
-
-  publish-linux-desktop:
-    # boardwalk/linux-desktop (base + desktop + browser tier). Same release shape as publish-linux; it
-    # derives FROM the published base by digest, so it builds the added layer on top of the pin. Runs
-    # after publish-linux so the GitHub release for the tag already exists — this job UPLOADS its SBOM
-    # + scan to it (never re-creates it) and appends its own digest line.
-    needs: publish-linux
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write # attach SBOM + scan report to the release
-      packages: write # push to GHCR
-      id-token: write # build provenance
-    steps:
-      - uses: actions/checkout@v5
-      - uses: docker/setup-qemu-action@v3 # arm64 emulation so the image ships both arches
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Resolve the image ref (the image tag is the semver WITHOUT the git tag's leading v)
-        id: meta
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          echo "version=${version}" >> "$GITHUB_OUTPUT"
-          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER}/boardwalk-runner-linux-desktop:${version}" >> "$GITHUB_OUTPUT"
-      - name: Build and push (with provenance)
-        id: push
-        uses: docker/build-push-action@v6
-        with:
-          context: images/linux-desktop
-          push: true
-          # Multi-arch: hosted runners + Fargate are arm64 (Graviton); self-hosters may be either.
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.image }}
-          provenance: true
-      - name: Generate SBOM of the pushed image
-        uses: anchore/sbom-action@v0
-        with:
-          image: ${{ steps.meta.outputs.image }}
-          format: spdx-json
-          output-file: sbom-linux-desktop.spdx.json
-      - name: Vulnerability gate (fixable criticals block the release)
-        uses: anchore/scan-action@v6
-        with:
-          image: ${{ steps.meta.outputs.image }}
-          severity-cutoff: critical
-          only-fixed: true # mirrors POLICY.md — gate on fixable criticals only
-          fail-build: true
-          output-format: table
-      - name: Vulnerability scan report (full, attached to the release)
-        uses: anchore/scan-action@v6
-        id: scan
-        with:
-          image: ${{ steps.meta.outputs.image }}
-          severity-cutoff: high
-          fail-build: false # published for transparency, never blocks
-          output-format: sarif
-      - name: Upload digest + SBOM + scan to the existing release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          DIGEST: ${{ steps.push.outputs.digest }}
-        run: |
-          # Distinct asset name so it doesn't clobber the base image's scan sarif on the release.
-          cp "${{ steps.scan.outputs.sarif }}" linux-desktop.scan.sarif
-          gh release upload "$GITHUB_REF_NAME" --clobber \
-            sbom-linux-desktop.spdx.json linux-desktop.scan.sarif
-          # Append this image's digest to the existing release notes (created by publish-linux).
-          gh release view "$GITHUB_REF_NAME" --json body -q .body > notes.md
-          {
-            echo ""
-            echo "Tag: \`${{ steps.meta.outputs.image }}\`"
-            echo "Pin by digest: \`${{ steps.meta.outputs.image }}@${DIGEST}\`"
-          } >> notes.md
-          gh release edit "$GITHUB_REF_NAME" --notes-file notes.md
