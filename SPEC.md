@@ -22,9 +22,12 @@ Anyone running workflows on hosted compute should be able to answer: what OS, wh
 | Image | Label | Contents |
 |---|---|---|
 | `ghcr.io/boardwalk-labs/boardwalk-runner-linux:<version>` | `boardwalk/linux` | Base Linux + Node LTS + git + common build tooling |
+| `ghcr.io/boardwalk-labs/boardwalk-runner-linux-desktop:<version>` | `boardwalk/linux-desktop` | The base + an on-screen desktop (Xvfb + WM) + a browser tier (Chromium + a pinned Playwright MCP) |
 | Later: `-node`, `-python` variants | `boardwalk/linux-*` | Ecosystem-specific toolchains |
 
 `boardwalk/linux-large` is **not** a separate image: it's this same image at a larger runner size (a per-run resource selector), so it isn't published here.
+
+`boardwalk/linux-desktop` **derives from `boardwalk/linux` by digest** and adds only the commodity, publicly-auditable half of the computer-use runtime — the desktop display stack + Chromium + Playwright MCP. It is the image the hosted fleet runs so every hosted run has a screen (the ambient-desktop model) and `computer.openBrowser()` works; the platform's private worker layer adds only the broker-coupled capture / live-view agent on top. It is a **separate** image (not folded into `boardwalk/linux`) because Chromium is the largest CVE surface in the stack — it belongs in a public, SBOM'd, scanned image, and a plain run that never opens a browser should not carry it. It is **not** a per-run flavor authors select: the platform makes it the hosted default. The image sets the browser-tier contract the runner reads (`BOARDWALK_BROWSER_TIER=1`, `BOARDWALK_BROWSER_CHROME_PATH`, `BOARDWALK_BROWSER_MCP_COMMAND`, `DISPLAY`).
 
 Tagging: semver tags + immutable digests for every published image; `latest` is never used in hosted deployments.
 

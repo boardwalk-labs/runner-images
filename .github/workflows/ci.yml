@@ -85,3 +85,62 @@ jobs:
           only-fixed: true
           fail-build: false # reported for triage, never blocks — see SECURITY_TRIAGE.md
           output-format: table
+
+  linux-desktop-image:
+    # boardwalk/linux-desktop = the base + an on-screen desktop + the browser tier (Chromium +
+    # Playwright MCP). Its own build/smoke/lock/scan, same shape as linux-image; it derives FROM the
+    # published base by digest, so this builds the added layer on top of the pinned parent.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build boardwalk/linux-desktop
+        run: docker build -t boardwalk-runner-linux-desktop:ci images/linux-desktop
+      - name: Smoke-test the browser tier (offline — the desktop, Chromium CDP, and Playwright MCP)
+        run: |
+          docker run --rm --network none -i boardwalk-runner-linux-desktop:ci bash \
+            < images/linux-desktop/smoke.sh
+      - name: Environment lock — fail on drift (the env change IS the PR diff)
+        run: |
+          scripts/env-manifest.sh boardwalk-runner-linux-desktop:ci > /tmp/ENVIRONMENT.lock
+          if ! diff -u images/linux-desktop/ENVIRONMENT.lock /tmp/ENVIRONMENT.lock > /tmp/env.diff; then
+            {
+              echo "### Runner environment changed (linux-desktop)"
+              echo "The built image no longer matches \`images/linux-desktop/ENVIRONMENT.lock\`."
+              echo "Regenerate and commit it so the change is reviewed in this PR:"
+              echo '```'
+              echo "scripts/env-manifest.sh <built-image> > images/linux-desktop/ENVIRONMENT.lock"
+              echo '```'
+              echo '```diff'
+              cat /tmp/env.diff
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Environment lock out of date — regenerate images/linux-desktop/ENVIRONMENT.lock (see job summary)"
+            exit 1
+          fi
+          echo "Environment lock matches the built image." >> "$GITHUB_STEP_SUMMARY"
+      - name: Generate SBOM (SPDX)
+        uses: anchore/sbom-action@v0
+        with:
+          image: boardwalk-runner-linux-desktop:ci
+          format: spdx-json
+          output-file: sbom.spdx.json
+          artifact-name: sbom-linux-desktop.spdx.json
+      - name: Vulnerability scan (gate on fixable criticals)
+        uses: anchore/scan-action@v6
+        with:
+          image: boardwalk-runner-linux-desktop:ci
+          severity-cutoff: critical
+          fail-build: true
+          # Same gate as the base (POLICY.md): a new FIXABLE critical blocks; the Debian base's
+          # unpatchable "won't fix" CVEs are excluded by only-fixed. Chromium's fixable criticals,
+          # if any, block the build — clear by bumping the base digest or the pinned packages.
+          only-fixed: true
+          output-format: table
+      - name: Vulnerability report — high severity (informational, triaged)
+        uses: anchore/scan-action@v6
+        with:
+          image: boardwalk-runner-linux-desktop:ci
+          severity-cutoff: high
+          only-fixed: true
+          fail-build: false # reported for triage, never blocks — see SECURITY_TRIAGE.md
+          output-format: table

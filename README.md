@@ -14,6 +14,7 @@ and inspect them yourself.
 | Label | Image | Docs |
 | --- | --- | --- |
 | `boardwalk/linux` | `ghcr.io/boardwalk-labs/boardwalk-runner-linux:<version>` | [docs/linux.md](./docs/linux.md) |
+| `boardwalk/linux-desktop` | `ghcr.io/boardwalk-labs/boardwalk-runner-linux-desktop:<version>` | [docs/linux-desktop.md](./docs/linux-desktop.md) |
 
 ## Planned images
 
