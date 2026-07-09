@@ -68,10 +68,10 @@ docker export "$CID" | sudo tar -x -C "$MNT" --numeric-owner --xattrs --xattrs-i
 sudo mkdir -p "$MNT/proc" "$MNT/sys" "$MNT/dev" "$MNT/workspace"
 
 # Static image config (Config.Env) → /etc/bwimage.env. `docker export` flattens the filesystem but
-# NOT the image config, and a directly-booted rootfs has nothing that applies Docker ENV (the kernel
-# execs the guest init, not the image's configured process env). So capture the image's ENV into a
-# file the guest init (bwinit) sources into the worker's environment — without this, image ENV such as
-# the browser-tier contract (BOARDWALK_BROWSER_*/DISPLAY) silently vanishes in the microVM lane.
+# NOT the image config, and a directly booted guest has nothing that applies Docker ENV (the kernel
+# execs the guest init, not the image's configured process env). Capture the image's ENV in a file
+# that the guest init (bwinit) can source so required static image environment variables remain
+# available.
 docker image inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$IMAGE" \
   | sudo tee "$MNT/etc/bwimage.env" >/dev/null
 
