@@ -18,9 +18,8 @@ guest is exactly these two files plus an init process:
 | `vmlinux-<version>` | [`kernel/build_kernel.sh`](./kernel/build_kernel.sh) | Minimal uncompressed x86_64 kernel, built from kernel.org sources with Firecracker's CI microvm config, verified against [`kernel/required.config`](./kernel/required.config) |
 | `rootfs.ext4` | [`rootfs/oci_to_ext4.sh`](./rootfs/oci_to_ext4.sh) | Any runner OCI image (e.g. `boardwalk-runner-linux`) flattened to a single ext4 filesystem |
 
-The guest **init** (PID 1) is not defined here — it is part of the platform's private runtime
-layer, exactly like the worker runtime layered onto the container base images. These recipes are
-the public substrate under it.
+The guest **init** (PID 1) is supplied by the runtime and is not defined here. These recipes define
+the public boot substrate.
 
 ## Kernel
 

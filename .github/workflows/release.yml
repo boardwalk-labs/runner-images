@@ -39,8 +39,7 @@ jobs:
         with:
           context: images/linux
           push: true
-          # Multi-arch: hosted runners + Fargate are arm64 (Graviton); self-hosters may be either.
-          # A single-arch base can't be the FROM of an arm64 build (e.g. the platform worker image).
+          # Publish both supported architectures for hosted and self-hosted deployments.
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.image }}
           provenance: true

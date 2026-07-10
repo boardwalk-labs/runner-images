@@ -67,13 +67,28 @@ docker export "$CID" | sudo tar -x -C "$MNT" --numeric-owner --xattrs --xattrs-i
 # Mount points the guest init expects to exist on the read-only base.
 sudo mkdir -p "$MNT/proc" "$MNT/sys" "$MNT/dev" "$MNT/workspace"
 
-# Static image config (Config.Env) → /etc/bwimage.env. `docker export` flattens the filesystem but
-# NOT the image config, and a directly-booted rootfs has nothing that applies Docker ENV (the kernel
-# execs the guest init, not the image's configured process env). So capture the image's ENV into a
-# file the guest init (bwinit) sources into the worker's environment — without this, image ENV such as
-# the browser-tier contract (BOARDWALK_BROWSER_*/DISPLAY) silently vanishes in the microVM lane.
-docker image inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$IMAGE" \
-  | sudo tee "$MNT/etc/bwimage.env" >/dev/null
+# `docker export` omits Config.Env, so persist only the image's public browser contract. Parse the
+# inspect output as JSON and shell-quote each value before guest startup reads the assignment file.
+# A restrictive mode limits the file to the root-owned startup process.
+command -v python3 >/dev/null || { echo "oci_to_ext4: python3 is required" >&2; exit 1; }
+docker image inspect -f '{{json .Config.Env}}' "$IMAGE" \
+  | python3 -c '
+import json
+import shlex
+import sys
+
+allowed = {
+    "BOARDWALK_BROWSER_TIER",
+    "BOARDWALK_BROWSER_CHROME_PATH",
+    "BOARDWALK_BROWSER_MCP_COMMAND",
+    "DISPLAY",
+}
+for item in json.load(sys.stdin) or []:
+    key, separator, value = item.partition("=")
+    if separator and key in allowed:
+        print(f"{key}={shlex.quote(value)}")
+' \
+  | sudo install -m 0600 /dev/stdin "$MNT/etc/bwimage.env"
 
 sudo umount "$MNT"
 

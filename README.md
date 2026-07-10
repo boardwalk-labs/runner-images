@@ -4,10 +4,8 @@ Base image definitions for [Boardwalk](https://boardwalk.sh) hosted runners — 
 your workflow programs and shell steps execute in. Image sources, pinned versions, SBOMs, scan
 reports, and the versioning policy are all here and reproducible.
 
-The hosted Boardwalk platform builds its worker images from these bases, pinned by digest, then
-adds a private runtime layer. That layer is not published, but it carries no secrets-relevant
-behavior: the base images in this repo define what your code sees at runtime, and you can build
-and inspect them yourself.
+Hosted deployments consume these bases pinned by digest. The base images in this repo define the
+documented environment your code sees, and you can build and inspect them yourself.
 
 ## Images
 

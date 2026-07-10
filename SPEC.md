@@ -2,7 +2,7 @@
 
 > The public trust surface for hosted runner environments: exactly what your code runs inside on hosted Boardwalk. Apache-2.0. Public in **Phase 3** (before hosted-runner trust questions arise).
 >
-> These public base images are what the Boardwalk platform worker images derive from **by digest** — so the build environment is inspectable without the private runtime layer being public.
+> These public base images define an inspectable build environment and are consumed **by digest**.
 
 ## 1. Purpose
 
@@ -40,5 +40,5 @@ Tagging: semver tags + immutable digests for every published image; `latest` is 
 ## 5. Ready to go public when
 
 1. The `boardwalk/linux` image builds, scans clean (per the triage policy), and publishes with SBOM + digest.
-2. the Boardwalk platform's worker image consumes the published base **by digest**.
+2. Hosted deployments consume the published base **by digest**.
 3. Image docs (§2) complete for every published image; publication checklist passes.
