@@ -27,8 +27,8 @@ are intent, not a commitment.
 | `boardwalk/linux-node` | A Node-centric toolchain: extra package managers and multiple Node lines, past the base's single Node 24 | Planned |
 | `boardwalk/linux-python` | Pinned multi-version CPython plus a modern installer (uv / poetry), past the base's `python3` | Planned |
 
-`boardwalk/linux-large` is intentionally not here: it's `boardwalk/linux` at a larger runner size
-(a per-run resource selector), not a separate image.
+A bigger machine is intentionally not a label here: it's the `runs_on` `size` selector
+(`{ label: "boardwalk/linux", size: "large" }`), a per-run resource override on the same image.
 
 Have a variant you'd actually run? Open a feature request (see [CONTRIBUTING.md](./CONTRIBUTING.md)).
 A strong proposal names the tools, why a meaningful share of workflows need them, and why they don't

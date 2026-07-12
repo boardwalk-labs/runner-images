@@ -24,7 +24,7 @@ Anyone running workflows on hosted compute should be able to answer: what OS, wh
 | `ghcr.io/boardwalk-labs/boardwalk-runner-linux:<version>` | `boardwalk/linux` | Base Linux + Node LTS + git + common build tooling |
 | Later: `-node`, `-python` variants | `boardwalk/linux-*` | Ecosystem-specific toolchains |
 
-`boardwalk/linux-large` is **not** a separate image: it's this same image at a larger runner size (a per-run resource selector), so it isn't published here.
+A larger machine is **not** a separate image: it's the `runs_on` `size` selector (`{ label, size }`), a per-run resource override on this same image, so nothing extra is published here.
 
 Tagging: semver tags + immutable digests for every published image; `latest` is never used in hosted deployments.
 
