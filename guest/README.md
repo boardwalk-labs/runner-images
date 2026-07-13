@@ -5,10 +5,9 @@ Recipes for the artifacts a Boardwalk hosted runner needs when it executes insid
 flattened from a runner OCI image. Same trust story as the container images ([SPEC](../SPEC.md)):
 what your code runs inside is defined here, pinned, and rebuildable by anyone. (Rebuildable, not
 bit-reproducible: the KBUILD identity stamps are pinned but the host toolchain is not, so two
-builders can get different hashes of a byte-equivalent-in-behavior kernel. Once publishing is
-wired up — see [Publishing](#publishing) — the CI build is the canonical artifact; until then
-the `.sha256` + archived `.config` emitted beside each hand-built artifact are the record of
-what was built.)
+builders can get different hashes of a byte-equivalent-in-behavior kernel. The CI build published
+with each release — see [Publishing](#publishing) — is the canonical artifact; the `.sha256` +
+archived `.config` emitted beside each build are the record of what was built.)
 
 Firecracker boots a kernel directly (no bootloader, no disk image with a boot partition), so the
 guest is exactly these two files plus an init process:
@@ -85,6 +84,19 @@ observation) belong to the platform's runtime tests, not the image recipes.
 
 ## Publishing
 
-Not yet wired into CI. The plan mirrors the container images: canonical artifacts build in this
-repo's CI on x86_64 and publish versioned + checksummed alongside image releases, and the
-platform consumes them by digest. Until then, build from source with the recipes above.
+Wired into the release workflow (`.github/workflows/release.yml`, `publish-guest` job): on every
+version tag, after the container image publishes, CI builds the guest kernel from source
+(`build_kernel.sh`, pinned + verified against `required.config`), flattens **that same release's
+image by digest** into the rootfs (`oci_to_ext4.sh`), **smoke-boots the pair in a real
+Firecracker microVM** (`smoke_boot.sh`, KVM on the runner), and attaches to the GitHub release:
+
+| Asset | What it is |
+| --- | --- |
+| `vmlinux-<kver>` (+ `.sha256`, `.config`) | The guest kernel + the exact config that produced it |
+| `boardwalk-guest-rootfs-<ver>.ext4.zst` (+ `.sha256`) | The image flattened to ext4, zstd-compressed |
+| `boardwalk-guest-rootfs-<ver>.ext4.sha256` | sha256 of the **decompressed** ext4 — what a consumer verifies after `zstd -d` |
+
+The CI build is the canonical artifact; the recipes stay rebuildable by anyone (the
+auditable-rebuildable caveat above applies to the kernel). The platform's private runtime layer
+(the guest init and worker entrypoint) is baked on top of the published rootfs downstream — no
+private input is needed to reproduce anything published here.

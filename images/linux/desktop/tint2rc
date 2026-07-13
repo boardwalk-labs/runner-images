@@ -1,0 +1,19 @@
+# Boardwalk ambient-desktop dock — a centered, floating Mac-style dock (launcher icons only).
+# Background 1: translucent dark pill with a hairline border.
+rounded = 16
+border_width = 1
+border_color = #ffffff 16
+background_color = #10161d 42
+panel_monitor = all
+panel_position = bottom center horizontal
+panel_size = 132 60
+panel_margin = 0 16
+panel_padding = 8 8 12
+panel_items = L
+panel_background_id = 1
+launcher_padding = 4 6 12
+launcher_background_id = 0
+launcher_icon_size = 40
+launcher_icon_asb = 100 0 5
+launcher_item_app = /usr/share/applications/bw-chromium.desktop
+launcher_item_app = /usr/share/applications/bw-terminal.desktop

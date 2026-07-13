@@ -14,6 +14,10 @@ env:
 jobs:
   publish-linux:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      image: ${{ steps.meta.outputs.image }}
+      digest: ${{ steps.push.outputs.digest }}
     permissions:
       contents: write # attach SBOM + scan report to the release
       packages: write # push to GHCR
@@ -82,3 +86,103 @@ jobs:
           } > notes.md
           gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md \
             sbom.spdx.json "${{ steps.scan.outputs.sarif }}"
+
+  # The Firecracker guest artifacts (guest/README.md): the canonical kernel + the image flattened
+  # to an ext4 rootfs, built from the SAME release's image by digest, smoke-booted in a real
+  # microVM, and attached to the release. The platform consumes these by version + sha256 (its
+  # deploy syncs them into its artifact store); its private runtime layer (guest init + worker)
+  # is baked on top downstream — nothing private is needed to reproduce these artifacts.
+  publish-guest:
+    runs-on: ubuntu-latest # x86_64 with /dev/kvm — guests are x86_64-only
+    needs: publish-linux
+    timeout-minutes: 90 # kernel build ~15-20 min on 4 vCPUs; rootfs + smoke + upload the rest
+    permissions:
+      contents: write # upload release assets + edit release notes
+      packages: read # pull the just-pushed image from GHCR
+    env:
+      FC_TAG: v1.16.0 # smoke-boot tooling only (the published artifacts don't include Firecracker)
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Free runner disk (the rootfs pipeline needs ~15 GB of scratch)
+        run: |
+          sudo rm -rf /usr/local/lib/android /opt/hostedtoolcache /usr/share/dotnet /opt/ghc
+          df -h /
+
+      - name: Build the guest kernel (pinned 6.1 LTS, verified against required.config)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends flex bison bc libelf-dev libssl-dev
+          guest/kernel/build_kernel.sh
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Flatten the release image (by digest) to the guest rootfs
+        env:
+          IMAGE: ${{ needs.publish-linux.outputs.image }}
+          DIGEST: ${{ needs.publish-linux.outputs.digest }}
+        run: |
+          ref="${IMAGE%%:*}@${DIGEST}" # digest-pinned: the rootfs is exactly this release's image
+          guest/rootfs/oci_to_ext4.sh "$ref" "$RUNNER_TEMP/rootfs.ext4"
+
+      - name: Smoke-boot the pair in a real microVM (KVM)
+        run: |
+          # Standard GitHub Linux runners expose /dev/kvm; grant this session access to it.
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+          # Firecracker is smoke tooling, not a published artifact — fetched by pinned tag.
+          arch="$(uname -m)"
+          curl -fsSL -o /tmp/fc.tgz \
+            "https://github.com/firecracker-microvm/firecracker/releases/download/${FC_TAG}/firecracker-${FC_TAG}-${arch}.tgz"
+          tar -xzf /tmp/fc.tgz -C /tmp
+          sudo install -m 0755 "/tmp/release-${FC_TAG}-${arch}/firecracker-${FC_TAG}-${arch}" /usr/local/bin/firecracker
+          SMOKE_SCRATCH_DIR="$RUNNER_TEMP" guest/smoke_boot.sh \
+            guest/kernel/dist/vmlinux-* "$RUNNER_TEMP/rootfs.ext4"
+
+      - name: Compress, checksum, and attach the guest artifacts to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.publish-linux.outputs.version }}
+          IMAGE: ${{ needs.publish-linux.outputs.image }}
+          DIGEST: ${{ needs.publish-linux.outputs.digest }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          rootfs="boardwalk-guest-rootfs-${VERSION}.ext4"
+          mv rootfs.ext4 "$rootfs"
+          # The raw-ext4 sha256 is what a consumer verifies AFTER decompressing — the artifact
+          # store contract. The .zst gets its own sha256 for transport integrity.
+          sha256sum "$rootfs" > "$rootfs.sha256"
+          zstd -T0 -12 --rm "$rootfs" -o "$rootfs.zst"
+          sha256sum "$rootfs.zst" > "$rootfs.zst.sha256"
+          # GitHub release assets cap at 2 GiB/file. If the compressed rootfs ever crosses it,
+          # move the rootfs to a GHCR OCI artifact (oras push) and keep the release as pointers.
+          size=$(stat -c%s "$rootfs.zst")
+          [ "$size" -lt 2000000000 ] || {
+            echo "::error::$rootfs.zst is ${size} bytes (> ~2 GiB release-asset cap) — move the rootfs to a GHCR OCI artifact"
+            exit 1
+          }
+
+          kdist="$GITHUB_WORKSPACE/guest/kernel/dist"
+          gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            "$kdist"/vmlinux-* \
+            "$rootfs.zst" "$rootfs.zst.sha256" "$rootfs.sha256"
+
+          kver="$(basename "$kdist"/vmlinux-*.config .config)"
+          {
+            gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json body -q .body
+            echo ""
+            echo "## Firecracker guest artifacts"
+            echo ""
+            echo "Kernel \`${kver#vmlinux-}\` (\`${kver}\` + \`.config\` + \`.sha256\`) and the"
+            echo "rootfs flattened from \`${IMAGE%%:*}@${DIGEST}\` (\`${rootfs}.zst\`, zstd)."
+            echo "Verify after decompressing: \`sha256sum -c ${rootfs}.sha256\`."
+            echo "Recipes: \`guest/\` — rebuildable by anyone."
+          } > guest-notes.md
+          gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --notes-file guest-notes.md

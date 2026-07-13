@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Boardwalk ambient desktop — minimal openbox config. Anything not set here uses openbox
+     built-in defaults. The desktop is a one-way live view, so no keyboard/mouse bindings are
+     configured. titleLayout "L" = label only (no min/max/close buttons on this surface). -->
+<openbox_config xmlns="http://openbox.org/3.4/rc">
+  <theme>
+    <name>Boardwalk</name>
+    <titleLayout>L</titleLayout>
+    <font place="ActiveWindow">
+      <name>Noto Sans</name>
+      <size>9</size>
+      <weight>Bold</weight>
+      <slant>Normal</slant>
+    </font>
+    <font place="InactiveWindow">
+      <name>Noto Sans</name>
+      <size>9</size>
+      <weight>Bold</weight>
+      <slant>Normal</slant>
+    </font>
+  </theme>
+  <applications>
+    <!-- The run-output terminal start-desktop.sh launches: pin it top-right at a fixed size so
+         the live view + recording always frame it the same way. (sakura has no title flag — the
+         shell sets the title via escape after map, so match on the window class instead.) -->
+    <application class="*akura*">
+      <size>
+        <width>880</width>
+        <height>560</height>
+      </size>
+      <position force="yes">
+        <x>-28</x>
+        <y>36</y>
+      </position>
+    </application>
+  </applications>
+</openbox_config>

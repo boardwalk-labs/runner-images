@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=Browser
+Icon=chromium
+Exec=/usr/local/bin/boardwalk-chromium

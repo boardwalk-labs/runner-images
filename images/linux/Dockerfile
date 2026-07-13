@@ -22,6 +22,8 @@ ARG TS_LANGUAGE_SERVER_VERSION=5.3.0
 # package installer / runner. Both pulled as pinned release tarballs (no third-party apt repo).
 ARG RIPGREP_VERSION=15.1.0
 ARG UV_VERSION=0.11.24
+# Playwright MCP server for browser automation against the image's Chromium (desktop tier below).
+ARG PLAYWRIGHT_MCP_VERSION=0.0.77
 
 # A UTF-8 locale by default: without it LANG is empty and git, Python, and many CLIs fall back to an
 # ASCII codec and mangle non-ASCII I/O. C.UTF-8 needs no `locales` package on Debian.
@@ -107,6 +109,58 @@ RUN mkdir -p /usr/local/share/npm-global \
   "typescript@${TYPESCRIPT_VERSION}" "typescript-language-server@${TS_LANGUAGE_SERVER_VERSION}" \
   && pnpm --version && tsx --version && tsc --version && typescript-language-server --version \
   && chown -R node:node /usr/local/share/npm-global
+
+# ---------------------------------------------------------------------------------------------
+# Desktop tier — one image, no variants (decided 2026-07-13). Every hosted runner ships the same
+# desktop/browser capability because ambient session recording + live-view are default-on product
+# behavior, and one image per OS (the GitHub-Actions model) keeps the trust surface singular.
+# Xvfb + openbox drive a virtual display, Chromium is the browser (with a no-sandbox wrapper —
+# the runner itself is the sandbox boundary), ffmpeg records the session, and feh/tint2/sakura
+# render the ambient desktop (wallpaper, dock, live run-output terminal). The Playwright MCP
+# server gives agents structured browser control against the same Chromium.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  xvfb openbox x11-utils xauth chromium ffmpeg feh tint2 sakura \
+  adwaita-icon-theme hicolor-icon-theme \
+  fonts-liberation fonts-noto-core fonts-noto-color-emoji fonts-jetbrains-mono \
+  && rm -rf /var/lib/apt/lists/* \
+  && npm install -g "@playwright/mcp@${PLAYWRIGHT_MCP_VERSION}" && playwright-mcp --help >/dev/null \
+  && chown -R node:node /usr/local/share/npm-global
+
+# Chromium wrapper with the flags a display-less, single-tenant VM/container needs. --no-sandbox
+# is safe HERE because the runner boundary (microVM / container) is the sandbox; Chromium's own
+# sandbox can't set up inside an unprivileged container anyway.
+RUN printf '%s\n' '#!/usr/bin/env bash' \
+  'exec /usr/bin/chromium --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-features=Translate "$@"' \
+  > /usr/local/bin/boardwalk-chromium && chmod 0755 /usr/local/bin/boardwalk-chromium
+
+# Ambient desktop branding + session bring-up: wallpaper (pre-dimmed at build so the terminal +
+# dock pop against it: hue=s=0.7 ≈ grayscale(0.3); lutrgb composes brightness 0.72 then contrast
+# 1.04 → v*0.7488 - 5.1), the centered dock (tint2), launcher entries, the flat dark openbox
+# theme, and the bring-up script the platform's runtime layer execs before the worker when
+# BOARDWALK_BROWSER_TIER=1.
+RUN mkdir -p /usr/share/boardwalk /usr/share/themes/Boardwalk/openbox-3
+COPY desktop/wallpaper.jpg /usr/share/boardwalk/wallpaper-src.jpg
+RUN ffmpeg -loglevel error -i /usr/share/boardwalk/wallpaper-src.jpg \
+  -vf "hue=s=0.7,lutrgb=r='clip(val*0.7488-5.1,0,255)':g='clip(val*0.7488-5.1,0,255)':b='clip(val*0.7488-5.1,0,255)'" \
+  -q:v 2 -y /usr/share/boardwalk/wallpaper.jpg \
+  && rm /usr/share/boardwalk/wallpaper-src.jpg
+COPY desktop/tint2rc /etc/xdg/tint2/tint2rc
+COPY desktop/bw-chromium.desktop desktop/bw-terminal.desktop /usr/share/applications/
+COPY desktop/openbox-themerc /usr/share/themes/Boardwalk/openbox-3/themerc
+COPY desktop/openbox-rc.xml /etc/xdg/openbox/rc.xml
+COPY desktop/start-desktop.sh /usr/local/bin/boardwalk-start-desktop
+COPY desktop/run-tail.sh /usr/local/bin/boardwalk-run-tail
+RUN chmod 0755 /usr/local/bin/boardwalk-start-desktop /usr/local/bin/boardwalk-run-tail
+
+# The browser-tier environment contract: how the layers above this image (and tools inside a run)
+# discover the desktop. These are part of the image's public contract, captured into the microVM
+# lane by the rootfs recipe (guest/rootfs/oci_to_ext4.sh writes Config.Env to /etc/bwimage.env).
+ENV BOARDWALK_BROWSER_TIER=1 \
+  BOARDWALK_BROWSER_CHROME_PATH=/usr/local/bin/boardwalk-chromium \
+  BOARDWALK_BROWSER_MCP_COMMAND=playwright-mcp \
+  BOARDWALK_RUN_LOG_FILE=/tmp/boardwalk-run.log \
+  DISPLAY=:0
+# ---------------------------------------------------------------------------------------------
 
 # /workspace is the per-run working directory contract: writable by the default user, HOME and
 # cwd for hosted runs. The engine/worker layer above this image owns hydration + persistence.

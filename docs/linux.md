@@ -14,9 +14,31 @@ The default hosted-runner environment. Image: `ghcr.io/boardwalk-labs/boardwalk-
 | gh (GitHub CLI) | pinned release `.deb`, `ARG GH_VERSION` | explicit bump |
 | openssh-client | Debian bookworm package | follows parent digest |
 | bash, coreutils | Debian bookworm | follows parent digest |
+| Chromium (+ `boardwalk-chromium` wrapper) | Debian bookworm package | follows parent digest |
+| Playwright MCP server (`playwright-mcp`) | npm, pinned `ARG PLAYWRIGHT_MCP_VERSION` | explicit bump |
+| Xvfb, openbox, ffmpeg, feh, tint2, sakura | Debian bookworm packages | follows parent digest |
 
 Anything not listed is not present. Workflows needing more either install it inside the run
 (subject to the run's egress policy) or use a custom runner image.
+
+## Desktop tier — one image, no variants
+
+Every runner image ships the desktop/browser capability; there is no separate headless variant.
+Ambient session recording and live-view are default-on platform behavior, so the display stack is
+part of what a Boardwalk runner *is* — and a single image per OS (the GitHub-Actions model) keeps
+the trust surface, the version pin, and the environment lock singular.
+
+- **Display:** Xvfb (virtual framebuffer) + openbox, brought up by
+  `/usr/local/bin/boardwalk-start-desktop` when the platform layer enables it. The image sets
+  `DISPLAY=:0`.
+- **Browser:** Debian Chromium via the `/usr/local/bin/boardwalk-chromium` wrapper
+  (`--no-sandbox --disable-dev-shm-usage --disable-gpu` — the runner boundary is the sandbox).
+- **Automation:** the Playwright MCP server (`playwright-mcp`) drives the same Chromium.
+- **Recording:** ffmpeg captures the session; feh/tint2/sakura render the ambient desktop
+  (wallpaper, dock, live run-output terminal).
+- **Contract env** (baked into the image, consumed by the layers above it):
+  `BOARDWALK_BROWSER_TIER=1`, `BOARDWALK_BROWSER_CHROME_PATH`, `BOARDWALK_BROWSER_MCP_COMMAND`,
+  `BOARDWALK_RUN_LOG_FILE`, `DISPLAY`.
 
 ## Filesystem layout
 
