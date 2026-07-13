@@ -142,8 +142,10 @@ jobs:
             "https://github.com/firecracker-microvm/firecracker/releases/download/${FC_TAG}/firecracker-${FC_TAG}-${arch}.tgz"
           tar -xzf /tmp/fc.tgz -C /tmp
           sudo install -m 0755 "/tmp/release-${FC_TAG}-${arch}/firecracker-${FC_TAG}-${arch}" /usr/local/bin/firecracker
-          SMOKE_SCRATCH_DIR="$RUNNER_TEMP" guest/smoke_boot.sh \
-            guest/kernel/dist/vmlinux-* "$RUNNER_TEMP/rootfs.ext4"
+          # Select the kernel binary precisely — the dist dir also holds .config + .sha256,
+          # and a bare vmlinux-* glob would hand smoke_boot the wrong file as its rootfs arg.
+          vmlinux="$(find guest/kernel/dist -name 'vmlinux-*' ! -name '*.config' ! -name '*.sha256')"
+          SMOKE_SCRATCH_DIR="$RUNNER_TEMP" guest/smoke_boot.sh "$vmlinux" "$RUNNER_TEMP/rootfs.ext4"
 
       - name: Compress, checksum, and attach the guest artifacts to the release
         env:
@@ -170,19 +172,24 @@ jobs:
           }
 
           kdist="$GITHUB_WORKSPACE/guest/kernel/dist"
-          gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+          # --clobber so a re-run of this job (e.g. after a transient upload failure) replaces
+          # rather than erroring on the assets it already attached.
+          gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --clobber \
             "$kdist"/vmlinux-* \
             "$rootfs.zst" "$rootfs.zst.sha256" "$rootfs.sha256"
 
           kver="$(basename "$kdist"/vmlinux-*.config .config)"
-          {
-            gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json body -q .body
-            echo ""
-            echo "## Firecracker guest artifacts"
-            echo ""
-            echo "Kernel \`${kver#vmlinux-}\` (\`${kver}\` + \`.config\` + \`.sha256\`) and the"
-            echo "rootfs flattened from \`${IMAGE%%:*}@${DIGEST}\` (\`${rootfs}.zst\`, zstd)."
-            echo "Verify after decompressing: \`sha256sum -c ${rootfs}.sha256\`."
-            echo "Recipes: \`guest/\` — rebuildable by anyone."
-          } > guest-notes.md
-          gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --notes-file guest-notes.md
+          body="$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json body -q .body)"
+          if ! grep -q '^## Firecracker guest artifacts' <<<"$body"; then
+            {
+              echo "$body"
+              echo ""
+              echo "## Firecracker guest artifacts"
+              echo ""
+              echo "Kernel \`${kver#vmlinux-}\` (\`${kver}\` + \`.config\` + \`.sha256\`) and the"
+              echo "rootfs flattened from \`${IMAGE%%:*}@${DIGEST}\` (\`${rootfs}.zst\`, zstd)."
+              echo "Verify after decompressing: \`sha256sum -c ${rootfs}.sha256\`."
+              echo "Recipes: \`guest/\` — rebuildable by anyone."
+            } > guest-notes.md
+            gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --notes-file guest-notes.md
+          fi
