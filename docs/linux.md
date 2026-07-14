@@ -24,8 +24,8 @@ Anything not listed is not present. Workflows needing more either install it ins
 ## Desktop tier — one image, no variants
 
 Every runner image ships the desktop/browser capability; there is no separate headless variant.
-Ambient session recording and live-view are default-on platform behavior, so the display stack is
-part of what a Boardwalk runner *is* — and a single image per OS (the GitHub-Actions model) keeps
+Certain platform behaviors are enabled by default, so the display stack is part of what a
+Boardwalk runner *is* — and a single image per OS (the GitHub-Actions model) keeps
 the trust surface, the version pin, and the environment lock singular.
 
 - **Display:** Xvfb (virtual framebuffer) + openbox, brought up by
