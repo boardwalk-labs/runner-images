@@ -1,8 +1,9 @@
 # runner-images
 
 Base image definitions for [Boardwalk](https://boardwalk.sh) hosted runners — the environment
-your workflow programs and shell steps execute in. Image sources, pinned versions, SBOMs, scan
-reports, and the versioning policy are all here and reproducible.
+your workflow programs and shell steps execute in. Image sources, pinned versions, and the
+versioning policy are all here and reproducible; SBOMs and vulnerability scan reports publish with
+every release.
 
 The hosted Boardwalk platform builds its worker images from these bases, pinned by digest, then
 adds a private runtime layer. That layer is not published, but it carries no secrets-relevant
@@ -36,7 +37,7 @@ belong in the base.
 
 ## Firecracker guest artifacts
 
-Hosted runners are moving onto a Firecracker microVM substrate, which boots a **kernel** and an
+Hosted runners run on a Firecracker microVM substrate, which boots a **kernel** and an
 **ext4 rootfs** instead of a container. The recipes for both — a pinned minimal guest kernel with
 a verified required-capability set, an OCI→ext4 flattener for the runner images above, and a
 smoke-boot gate — live in [`guest/`](./guest/README.md). Same trust story as the container
