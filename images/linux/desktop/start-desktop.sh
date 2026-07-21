@@ -19,12 +19,23 @@ xdpyinfo -display "$DISPLAY" >/dev/null 2>&1 || {
   exit 1
 }
 
+# Never blank the screen. The X screensaver/DPMS would, after its idle timeout, blank a long-running
+# run's screen — hiding the on-screen output from the live-view + recording — and the blank itself is
+# a spurious frame change. Keep the display always-on so the desktop stays a stable, static image
+# whenever nothing is actually happening. Best-effort (xset absent on a trimmed image is fine).
+xset s off -dpms s noblank >/dev/null 2>&1 || true
+
 # Terminal styling, written at runtime so it lands in whichever user's HOME runs the desktop:
 # GTK css pads the vte widget (sakura has no padding setting of its own); sakura.conf sets the
 # font + a dark colorset matching the openbox/dock chrome.
 CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
 mkdir -p "$CONF_DIR/gtk-3.0" "$CONF_DIR/sakura" 2>/dev/null || true
 printf 'vte-terminal { padding: 12px 16px; }\n' >"$CONF_DIR/gtk-3.0/gtk.css" 2>/dev/null || true
+# Steady (non-blinking) terminal cursor. The on-screen run terminal is always visible, and a blinking
+# VTE cursor repaints ~2x/sec — which defeats the recorder's change-driven frame dropping (mpdecimate)
+# and keeps an otherwise-idle desktop encoding for no reason. VTE follows the GTK setting, so a steady
+# cursor makes an idle terminal genuinely static and lets the recording go quiet when nothing changes.
+printf '[Settings]\ngtk-cursor-blink=false\n' >"$CONF_DIR/gtk-3.0/settings.ini" 2>/dev/null || true
 cat >"$CONF_DIR/sakura/sakura.conf" <<'SAKURA' 2>/dev/null || true
 [sakura]
 colorset1_fore=rgb(219,232,242)
