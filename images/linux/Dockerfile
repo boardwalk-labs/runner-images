@@ -13,7 +13,7 @@
 FROM node:24-bookworm-slim@sha256:2c87ef9bd3c6a3bd4b472b4bec2ce9d16354b0c574f736c476489d09f560a203
 
 ARG GH_VERSION=2.94.0
-ARG PNPM_VERSION=10.23.0
+ARG PNPM_VERSION=10.34.4
 ARG TSX_VERSION=4.22.4
 ARG TYPESCRIPT_VERSION=5.9.3
 # The TypeScript language server powers the agent's LSP diagnostics (`typescript-language-server --stdio`).
@@ -25,11 +25,11 @@ ARG UV_VERSION=0.11.24
 # Playwright MCP server for browser automation against the image's Chromium (desktop tier below).
 ARG PLAYWRIGHT_MCP_VERSION=0.0.77
 
-# Refresh the bundled npm in place (same pinned 11.13.0): the node base image freezes npm's
-# nested dependency tree at ITS build time — a fresh install re-resolves npm's own ranges,
-# picking up nested security fixes (the tar >=7.5.19 fixable-critical gate) without changing
-# any pinned version.
-RUN npm install -g npm@11.13.0 && npm --version
+# npm 12: the node base's bundled npm 11 ships a frozen nested tree carrying tar <7.5.19 (a
+# fixable-critical); npm's release tarball BUNDLES node_modules, so only a version bump clears
+# it. (Known npm-12 caveat: `npm publish --provenance` is broken upstream — irrelevant inside a
+# guest; our release CIs pin their own npm.)
+RUN npm install -g npm@12.0.1 && npm --version
 
 # A UTF-8 locale by default: without it LANG is empty and git, Python, and many CLIs fall back to an
 # ASCII codec and mangle non-ASCII I/O. C.UTF-8 needs no `locales` package on Debian.
