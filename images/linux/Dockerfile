@@ -25,6 +25,12 @@ ARG UV_VERSION=0.11.24
 # Playwright MCP server for browser automation against the image's Chromium (desktop tier below).
 ARG PLAYWRIGHT_MCP_VERSION=0.0.77
 
+# Refresh the bundled npm in place (same pinned 11.13.0): the node base image freezes npm's
+# nested dependency tree at ITS build time — a fresh install re-resolves npm's own ranges,
+# picking up nested security fixes (the tar >=7.5.19 fixable-critical gate) without changing
+# any pinned version.
+RUN npm install -g npm@11.13.0 && npm --version
+
 # A UTF-8 locale by default: without it LANG is empty and git, Python, and many CLIs fall back to an
 # ASCII codec and mangle non-ASCII I/O. C.UTF-8 needs no `locales` package on Debian.
 ENV LANG=C.UTF-8
