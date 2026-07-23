@@ -61,6 +61,8 @@ jobs:
               cat /tmp/env.diff
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
+            echo "--- env.diff (also in the job summary) ---"
+            cat /tmp/env.diff
             echo "::error::Environment lock out of date — regenerate images/linux/ENVIRONMENT.lock (see job summary)"
             exit 1
           fi
