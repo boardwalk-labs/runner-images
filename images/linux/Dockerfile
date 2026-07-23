@@ -88,6 +88,19 @@ RUN arch="$(dpkg --print-architecture)" \
   && rm -rf /tmp/rg.tar.gz /tmp/uv.tar.gz "/tmp/ripgrep-${RIPGREP_VERSION}-${rg_target}" "/tmp/uv-${uv_target}" \
   && rg --version && uv --version
 
+# CPython 3.13 — THE workflow-Python interpreter (the platform's Python SDK targets it, and the
+# Boardwalk CLI cross-builds dependency wheels for cp313, so the guest interpreter must match).
+# A uv-managed python-build-standalone install into a stable path; `python3`/`python3.13` resolve
+# to it via /usr/local/bin (PATH-first), while Debian's /usr/bin/python3 (3.11) stays for system
+# tooling that shebangs it directly. Version-pinned per POLICY.md; uv itself is pinned above, so
+# the resolution is reproducible.
+ARG WORKFLOW_PYTHON_VERSION=3.13.14
+RUN uv python install --install-dir /opt/python "${WORKFLOW_PYTHON_VERSION}" \
+  && py="$(ls -d /opt/python/cpython-${WORKFLOW_PYTHON_VERSION}-*/bin/python3.13)" \
+  && ln -s "$py" /usr/local/bin/python3.13 \
+  && ln -sf python3.13 /usr/local/bin/python3 \
+  && python3 --version && python3 -m pip --version
+
 # A single node-owned global npm prefix. The default prefix is /usr/local (root-owned), so a workflow
 # running as the unprivileged `node` user can't `npm install -g` at runtime without EACCES. Point the
 # prefix at a dedicated node-owned dir instead: the baked CLIs below install here, and a run can add
