@@ -13,7 +13,9 @@
 FROM node:24-bookworm-slim@sha256:2c87ef9bd3c6a3bd4b472b4bec2ce9d16354b0c574f736c476489d09f560a203
 
 ARG GH_VERSION=2.94.0
-ARG PNPM_VERSION=10.34.4
+# 10.34.5: the first 10.x whose dist bundles tar >=7.5.19 (GHSA-23hp-3jrh-7fpw critical gate)
+# — verified against the published tarball (dist/node_modules/tar), not the manifest range.
+ARG PNPM_VERSION=10.34.5
 ARG TSX_VERSION=4.22.4
 ARG TYPESCRIPT_VERSION=5.9.3
 # The TypeScript language server powers the agent's LSP diagnostics (`typescript-language-server --stdio`).
