@@ -109,6 +109,38 @@ RUN uv python install --install-dir /opt/python "${WORKFLOW_PYTHON_VERSION}" \
   && ln -sf python3.13 /usr/local/bin/python3 \
   && python3 --version && python3 -m pip --version
 
+# The document + data toolchain agents use to produce office artifacts and read/analyze data.
+# Pre-installed into the workflow interpreter (/opt/python, baked in, read-only) so a run imports
+# them with no pip round-trip or PEP-668 friction — the batteries-included contract hosted sandboxes
+# ship. Direct pins per POLICY.md; the full closure lands in ENVIRONMENT.lock.
+# --break-system-packages: the python-build-standalone interpreter is marked externally-managed;
+# this is the intended build-time root install into it.
+RUN uv pip install --python /usr/local/bin/python3.13 --system --break-system-packages --no-cache \
+  "openpyxl==3.1.5" \
+  "python-docx==1.1.2" \
+  "python-pptx==1.0.2" \
+  "pypdf==5.1.0" \
+  "pdfplumber==0.11.4" \
+  "reportlab==4.2.5" \
+  "XlsxWriter==3.2.0" \
+  "pandas==2.2.3" \
+  "numpy==2.1.3" \
+  "pillow==11.0.0" \
+  "tabulate==0.9.0" \
+  "matplotlib==3.9.2" \
+  "seaborn==0.13.2" \
+  && python3 -c "import openpyxl, docx, pptx, pypdf, pdfplumber, reportlab, xlsxwriter, pandas, numpy, PIL, tabulate, matplotlib, seaborn"
+
+# LibreOffice (headless) for format conversion the pure-Python libs can't do (office -> pdf, legacy
+# formats, fidelity rendering). SLIM set only (core + writer/calc/impress, no libreoffice-java-common):
+# drops the JVM + Base/HSQLDB stack, cutting size and the CVE surface — its two biggest liabilities.
+# A document-parsing bug crosses no new trust boundary: the run is already untrusted code in a
+# single-tenant throwaway microVM. Version pinned by ENVIRONMENT.lock, like chromium/ffmpeg.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  libreoffice-core libreoffice-writer libreoffice-calc libreoffice-impress \
+  && rm -rf /var/lib/apt/lists/* \
+  && soffice --headless --version
+
 # A single node-owned global npm prefix. The default prefix is /usr/local (root-owned), so a workflow
 # running as the unprivileged `node` user can't `npm install -g` at runtime without EACCES. Point the
 # prefix at a dedicated node-owned dir instead: the baked CLIs below install here, and a run can add

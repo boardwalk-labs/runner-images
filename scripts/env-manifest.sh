@@ -40,6 +40,12 @@ echo "[npm-global]"
 run 'npm ls -g --depth=0 --parseable 2>/dev/null | sed "s#.*/node_modules/##" | grep -vE "^(/|$)"' | sort
 echo
 
+echo "[python-packages]"
+# The workflow interpreter's full package closure (/opt/python 3.13), so drift in a pinned lib or a
+# transitive dep is a reviewed diff.
+run 'python3 -m pip list --format=freeze 2>/dev/null | grep "==" | sed "s/==/\t/"' | sort
+echo
+
 echo "[apt-packages]"
 # Escape the $ so the placeholders reach dpkg-query literally (the inner shell would otherwise
 # expand ${Package}/${Version} as its own unset variables — to empty).
