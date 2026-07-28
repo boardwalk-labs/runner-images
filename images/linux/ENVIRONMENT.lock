@@ -15,6 +15,7 @@ uv	0.11.24
 [npm-global]
 @playwright/mcp
 pnpm
+pyright
 tsx
 typescript
 typescript-language-server

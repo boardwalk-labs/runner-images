@@ -20,6 +20,9 @@ ARG TSX_VERSION=4.22.4
 ARG TYPESCRIPT_VERSION=5.9.3
 # The TypeScript language server powers the agent's LSP diagnostics (`typescript-language-server --stdio`).
 ARG TS_LANGUAGE_SERVER_VERSION=5.3.0
+# pyright is the Python language server (`pyright-langserver --stdio`), serving the same diagnostics
+# + navigation for the workflow interpreter's ecosystem (pandas/numpy/openpyxl, installed below).
+ARG PYRIGHT_VERSION=1.1.411
 # ripgrep: the fast recursive search coding agents (and the engine) lean on. uv: the fast Python
 # package installer / runner. Both pulled as pinned release tarballs (no third-party apt repo).
 ARG RIPGREP_VERSION=15.1.0
@@ -151,16 +154,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
 ENV PATH=/usr/local/share/npm-global/bin:$PATH
 
-# JS toolchain: pnpm + tsx + the TypeScript compiler and language server, installed into the global
-# npm prefix above. typescript-language-server (with a global tsserver via typescript) gives the
-# agent LSP diagnostics for any workspace, even one without its own TypeScript install. Deliberately
-# NOT via corepack — corepack resolves through per-$HOME state and will download an unpinned version
-# at run time (runs set HOME=/workspace), which breaks both pinning and offline runs.
+# JS toolchain: pnpm + tsx + the TypeScript compiler and the two language servers, installed into
+# the global npm prefix above. typescript-language-server (with a global tsserver via typescript)
+# and pyright both give the agent LSP diagnostics + navigation for any workspace, even one without
+# its own toolchain installed. pyright ships as an npm package, so Python code intelligence costs
+# this image no new runtime. Deliberately NOT via corepack — corepack resolves through per-$HOME
+# state and will download an unpinned version at run time (runs set HOME=/workspace), which breaks
+# both pinning and offline runs.
 RUN mkdir -p /usr/local/share/npm-global \
   && printf 'export PATH=/usr/local/share/npm-global/bin:$PATH\n' > /etc/profile.d/npm-global.sh \
   && npm install -g "pnpm@${PNPM_VERSION}" "tsx@${TSX_VERSION}" \
   "typescript@${TYPESCRIPT_VERSION}" "typescript-language-server@${TS_LANGUAGE_SERVER_VERSION}" \
+  "pyright@${PYRIGHT_VERSION}" \
   && pnpm --version && tsx --version && tsc --version && typescript-language-server --version \
+  && pyright --version && command -v pyright-langserver \
   && chown -R node:node /usr/local/share/npm-global
 
 # ---------------------------------------------------------------------------------------------
