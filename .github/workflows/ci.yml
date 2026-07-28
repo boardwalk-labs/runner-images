@@ -28,6 +28,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      # Before the build, because a stale lock is INVISIBLE to the ENVIRONMENT.lock check below:
+      # editing requirements.in without recompiling installs the old closure, and the built image
+      # still matches its own recorded manifest. Only a fresh resolve catches it.
+      - name: Python lock — fail if requirements.txt is stale for requirements.in
+        run: scripts/compile-python-deps.sh --check
       - name: Build boardwalk/linux
         run: docker build -t boardwalk-runner-linux:ci images/linux
       - name: Smoke-test the environment contract (offline — pins must not lazy-download)

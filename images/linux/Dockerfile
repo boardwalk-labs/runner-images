@@ -115,23 +115,21 @@ RUN uv python install --install-dir /opt/python "${WORKFLOW_PYTHON_VERSION}" \
 # The document + data toolchain agents use to produce office artifacts and read/analyze data.
 # Pre-installed into the workflow interpreter (/opt/python, baked in, read-only) so a run imports
 # them with no pip round-trip or PEP-668 friction — the batteries-included contract hosted sandboxes
-# ship. Direct pins per POLICY.md; the full closure lands in ENVIRONMENT.lock.
+# ship.
+#
+# Installed from a FULLY-PINNED lock, not a list of direct pins. What we intend to ship is declared
+# in requirements.in; requirements.txt is its resolved closure (regenerate with
+# scripts/compile-python-deps.sh). Direct pins alone left every transitive dep floating, so an
+# unrelated PyPI release could change the image — and ENVIRONMENT.lock only caught it AFTER the fact,
+# failing whatever build happened to be in flight. apt stays recorded-not-pinned by contrast because
+# Debian stable freezes it; PyPI has no such freeze, which is why this ecosystem gets a lock.
+#
 # --break-system-packages: the python-build-standalone interpreter is marked externally-managed;
 # this is the intended build-time root install into it.
+COPY requirements.txt /tmp/requirements.txt
 RUN uv pip install --python /usr/local/bin/python3.13 --system --break-system-packages --no-cache \
-  "openpyxl==3.1.5" \
-  "python-docx==1.1.2" \
-  "python-pptx==1.0.2" \
-  "pypdf==5.1.0" \
-  "pdfplumber==0.11.4" \
-  "reportlab==4.2.5" \
-  "XlsxWriter==3.2.0" \
-  "pandas==2.2.3" \
-  "numpy==2.1.3" \
-  "pillow==11.0.0" \
-  "tabulate==0.9.0" \
-  "matplotlib==3.9.2" \
-  "seaborn==0.13.2" \
+  -r /tmp/requirements.txt \
+  && rm /tmp/requirements.txt \
   && python3 -c "import openpyxl, docx, pptx, pypdf, pdfplumber, reportlab, xlsxwriter, pandas, numpy, PIL, tabulate, matplotlib, seaborn"
 
 # LibreOffice (headless) for format conversion the pure-Python libs can't do (office -> pdf, legacy
