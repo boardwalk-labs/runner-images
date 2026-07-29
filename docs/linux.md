@@ -32,7 +32,10 @@ the trust surface, the version pin, and the environment lock singular.
   `/usr/local/bin/boardwalk-start-desktop` when the platform layer enables it. The image sets
   `DISPLAY=:0`.
 - **Browser:** Debian Chromium via the `/usr/local/bin/boardwalk-chromium` wrapper
-  (`--no-sandbox --disable-dev-shm-usage --disable-gpu` — the runner boundary is the sandbox).
+  (`--no-sandbox --disable-dev-shm-usage --disable-gpu` — the runner boundary is the sandbox — plus
+  `--test-type` to suppress the unsupported-flag infobar `--no-sandbox` would otherwise paint over
+  every page, and `--disable-background-networking` so Chromium's own GCM/component-updater calls
+  don't show up as blocked egress a workflow never asked for).
 - **Automation:** the Playwright MCP server (`playwright-mcp`) drives the same Chromium.
 - **Recording:** ffmpeg captures the session; feh/tint2/sakura render the ambient desktop
   (wallpaper, dock, live run-output terminal).

@@ -187,8 +187,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Chromium wrapper with the flags a display-less, single-tenant VM/container needs. --no-sandbox
 # is safe HERE because the runner boundary (microVM / container) is the sandbox; Chromium's own
 # sandbox can't set up inside an unprivileged container anyway.
+#
+# The last two keep the browser from putting OUR plumbing in front of the user's eyes:
+#   --test-type suppresses the yellow "unsupported command-line flag: --no-sandbox" infobar, which
+#     Chromium shows unconditionally. It sits on top of every page, so it lands in every screenshot
+#     and every live view — and an agent asked whether a page LOOKS right sees a warning banner
+#     over the app it is judging. (Same flag ChromeDriver passes, for the same reason.)
+#   --disable-background-networking stops Chromium dialing its own services (GCM push at
+#     mtalk.google.com, the component updater). A run's egress policy rightly refuses them, so each
+#     one surfaced as an "Egress blocked" card in the run timeline that no workflow asked for.
 RUN printf '%s\n' '#!/usr/bin/env bash' \
-  'exec /usr/bin/chromium --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-features=Translate "$@"' \
+  'exec /usr/bin/chromium --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-features=Translate --test-type --disable-background-networking "$@"' \
   > /usr/local/bin/boardwalk-chromium && chmod 0755 /usr/local/bin/boardwalk-chromium
 
 # Ambient desktop branding + session bring-up: wallpaper (pre-dimmed at build so the terminal +
