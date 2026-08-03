@@ -9,7 +9,7 @@ charset-normalizer==3.4.9
     # via pdfminer-six
 contourpy==1.3.3
     # via matplotlib
-cryptography==49.0.0
+cryptography==50.0.0
     # via pdfminer-six
 cycler==0.12.1
     # via matplotlib
