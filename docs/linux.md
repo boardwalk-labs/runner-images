@@ -17,6 +17,7 @@ The default hosted-runner environment. Image: `ghcr.io/boardwalk-labs/boardwalk-
 | Chromium (+ `boardwalk-chromium` wrapper) | Debian bookworm package | follows parent digest |
 | Playwright MCP server (`playwright-mcp`) | npm, pinned `ARG PLAYWRIGHT_MCP_VERSION` | explicit bump |
 | Xvfb, openbox, ffmpeg, feh, tint2, sakura | Debian bookworm packages | follows parent digest |
+| xdotool | Debian bookworm package | follows parent digest |
 
 Anything not listed is not present. Workflows needing more either install it inside the run
 (subject to the run's egress policy) or use a custom runner image.
@@ -37,11 +38,15 @@ the trust surface, the version pin, and the environment lock singular.
   every page, and `--disable-background-networking` so Chromium's own GCM/component-updater calls
   don't show up as blocked egress a workflow never asked for).
 - **Automation:** the Playwright MCP server (`playwright-mcp`) drives the same Chromium.
+- **Desktop input:** `xdotool` injects XTEST input (click/type/key/scroll/drag) for the desktop
+  tier's raw-coordinate screenshot/click/type tool surface.
 - **Recording:** ffmpeg captures the session; feh/tint2/sakura render the ambient desktop
   (wallpaper, dock, live run-output terminal).
 - **Contract env** (baked into the image, consumed by the layers above it):
-  `BOARDWALK_BROWSER_TIER=1`, `BOARDWALK_BROWSER_CHROME_PATH`, `BOARDWALK_BROWSER_MCP_COMMAND`,
-  `BOARDWALK_RUN_LOG_FILE`, `DISPLAY`.
+  `BOARDWALK_BROWSER_TIER=1`, `BOARDWALK_DESKTOP_TIER=1` (the desktop tier is the raw-coordinate
+  screenshot/click/type tool surface; the runner layer above reads this to enable it),
+  `BOARDWALK_BROWSER_CHROME_PATH`, `BOARDWALK_BROWSER_MCP_COMMAND`, `BOARDWALK_RUN_LOG_FILE`,
+  `DISPLAY`.
 
 ## Filesystem layout
 

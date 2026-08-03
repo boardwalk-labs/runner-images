@@ -175,9 +175,10 @@ RUN mkdir -p /usr/local/share/npm-global \
 # Xvfb + openbox drive a virtual display, Chromium is the browser (with a no-sandbox wrapper —
 # the runner itself is the sandbox boundary), ffmpeg records the session, and feh/tint2/sakura
 # render the ambient desktop (wallpaper, dock, live run-output terminal). The Playwright MCP
-# server gives agents structured browser control against the same Chromium.
+# server gives agents structured browser control against the same Chromium; xdotool backs the
+# desktop tier's XTEST input injection (click/type/key/scroll/drag).
 RUN apt-get update && apt-get install -y --no-install-recommends \
-  xvfb openbox x11-utils xauth chromium ffmpeg feh tint2 sakura \
+  xvfb openbox x11-utils xauth xdotool chromium ffmpeg feh tint2 sakura \
   adwaita-icon-theme hicolor-icon-theme \
   fonts-liberation fonts-noto-core fonts-noto-color-emoji fonts-jetbrains-mono \
   && rm -rf /var/lib/apt/lists/* \
@@ -222,7 +223,10 @@ RUN chmod 0755 /usr/local/bin/boardwalk-start-desktop /usr/local/bin/boardwalk-r
 # The browser-tier environment contract: how the layers above this image (and tools inside a run)
 # discover the desktop. These are part of the image's public contract, captured into the microVM
 # lane by the rootfs recipe (guest/rootfs/oci_to_ext4.sh writes Config.Env to /etc/bwimage.env).
+# BOARDWALK_DESKTOP_TIER: the desktop tier is the raw-coordinate screenshot/click/type tool
+# surface; the runner layer above reads this to enable it.
 ENV BOARDWALK_BROWSER_TIER=1 \
+  BOARDWALK_DESKTOP_TIER=1 \
   BOARDWALK_BROWSER_CHROME_PATH=/usr/local/bin/boardwalk-chromium \
   BOARDWALK_BROWSER_MCP_COMMAND=playwright-mcp \
   BOARDWALK_RUN_LOG_FILE=/tmp/boardwalk-run.log \

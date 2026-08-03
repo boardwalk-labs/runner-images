@@ -42,12 +42,12 @@ jobs:
             node --version && pnpm --version && tsx --version
             git --version && gh --version && python3 --version && jq --version
             # Desktop tier (one image, no variants): display + browser + recording + session UI.
-            command -v Xvfb openbox ffmpeg feh tint2 sakura xdpyinfo >/dev/null
+            command -v Xvfb openbox ffmpeg feh tint2 sakura xdpyinfo xdotool >/dev/null
             boardwalk-chromium --version
             playwright-mcp --help >/dev/null
             [ -f /usr/share/boardwalk/wallpaper.jpg ]
             [ -x /usr/local/bin/boardwalk-start-desktop ] && [ -x /usr/local/bin/boardwalk-run-tail ]
-            [ "$BOARDWALK_BROWSER_TIER" = "1" ] && [ "$DISPLAY" = ":0" ]
+            [ "$BOARDWALK_BROWSER_TIER" = "1" ] && [ "$BOARDWALK_DESKTOP_TIER" = "1" ] && [ "$DISPLAY" = ":0" ]
             [ "$(whoami)" = "node" ]
             [ "$PWD" = "/workspace" ] && touch /workspace/writable
           '
